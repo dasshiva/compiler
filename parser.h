@@ -36,6 +36,7 @@ enum StatementType {
 
 typedef struct VarDecl {
 	Token* ident;
+	Token* type;
 	Expr*  init;
 } VarDecl;
 

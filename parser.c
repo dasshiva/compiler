@@ -9,6 +9,15 @@ static void ParserError(Lexer* lexer, Token* token, const char* msg) {
 			token->pos, msg);
 }
 
+int Expect(Lexer* lexer, TokenType type, const char* msg) {
+	Token* token = Next(lexer);
+	if (token->type == type)
+		return 1;
+
+	ParserError(lexer, token, msg);
+	return 0;
+}
+
 static int IsOperator(TokenType type) {
 	switch (type) {
 		case TT_PLUS: case TT_MINUS: case TT_ASTERISK: 
@@ -59,16 +68,21 @@ static Expr* makeExpr(enum ExprType type) {
 	return expr;
 }
 
-static Expr* PrattParseExpr(Lexer* lexer, int minbp) {
-	Token* tlhs = Next(lexer);
-	if (tlhs->type != TT_NUMBER && tlhs->type != TT_IDENT) {
-		ParserError(lexer, tlhs, "Expected literal or identifier here");
-		return NULL;
+static Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
+	Expr* lhs = NULL;
+	if (!expr) {
+		Token* tlhs = Next(lexer);
+		if (tlhs->type != TT_NUMBER && tlhs->type != TT_IDENT) {
+			ParserError(lexer, tlhs, "Expected literal or identifier here");
+			return NULL;
+		}
+
+		lhs = makeExpr(ET_LITERAL);
+		lhs->literal = tlhs;
+	}  else { 
+		lhs = expr;
 	}
-
-	Expr* lhs = makeExpr(ET_LITERAL);
-	lhs->literal = tlhs;
-
+	
 	while (1) {
 		Token* op = Peek(lexer);
 		if (op->type == TT_SEMICOLON || op->type == TT_EOF)
@@ -86,7 +100,7 @@ static Expr* PrattParseExpr(Lexer* lexer, int minbp) {
 			break;
 
 		Next(lexer);
-		Expr* rhs = PrattParseExpr(lexer, r_bp);
+		Expr* rhs = PrattParseExpr(lexer, NULL, r_bp);
 
 		Expr* tmp = makeExpr(ET_BINARY_OP);
 		tmp->binop = malloc(sizeof(BinaryOp));
@@ -100,37 +114,54 @@ static Expr* PrattParseExpr(Lexer* lexer, int minbp) {
 	return lhs;
 }
 
-static Expr* ParseExpression(Lexer* lexer) {
-	return PrattParseExpr(lexer, 0);
+static Expr* ParseExpression(Lexer* lexer, Expr* expr) {
+	return PrattParseExpr(lexer, expr, 0);
 }
 
 int ParseVarDecl(Lexer* lexer, Statement* stat) {
+	stat->type = ST_VARDECL;
+
 	Token* token = Peek(lexer);
-	Expr* expr = ParseExpression(lexer);
+	if (token->type != TT_IDENT) {
+		ParserError(lexer, token, "Expected an identifier");
+		return 1;
+	}
+
+	Next(lexer);
+
+	Token* op = Peek(lexer);
+	Token* ty = NULL;
+
+	if (op->type == TT_COLON) {
+		Next(lexer);
+		ty = Next(lexer);
+		if (ty->type != TT_IDENT) {
+			ParserError(lexer, ty, "Expected a type name here");
+			return 1;
+		}
+	}
+	else {
+		if (op->type != TT_EQUALS && op->type != TT_SEMICOLON) {
+			ParserError(lexer, op, "Expected '=' or ';' here");
+			return 1;
+		}
+	}
+
+	Expr* expr = (op->type == TT_SEMICOLON) ? NULL : makeExpr(ET_LITERAL);
+	if (!expr)
+		goto no_init;
+
+	expr->literal = token;
+
+	expr = ParseExpression(lexer, expr);
 	if (!expr)
 		return 1;
 
+no_init:
 	stat->vardecl = malloc(sizeof(VarDecl));
-	if (expr->type == ET_LITERAL) {
-		stat->vardecl->ident = expr->literal;
-		stat->vardecl->init = NULL;
-	} else {
-		if (expr->binop->type != BOT_EQUALS) {
-			ParserError(lexer, token, "Expected an assignment expression here");
-			return 1;
-		}
-
-		if (expr->binop->left->type != ET_LITERAL) {
-			ParserError(lexer, token, "Expected an identifier here");
-			return 1;
-
-		}
-
-		stat->vardecl->ident = expr->binop->left->literal;
-		stat->vardecl->init = expr->binop->right;
-	}
-		
-	stat->type = ST_VARDECL;
+	stat->vardecl->ident = token;
+	stat->vardecl->init = expr;
+	stat->vardecl->type = ty;
 	return 0;
 }
 
@@ -160,20 +191,16 @@ Statement* ParseStatement(Lexer* lexer) {
 		}
 
 		default: {
-			Expr* expr = ParseExpression(lexer);
+			Expr* expr = ParseExpression(lexer, NULL);
 			if (!expr) 
 				return NULL;
 			stat->type = ST_EXPR;
 			stat->expr = expr;
 		}
-
 	}
 
-	token = Next(lexer);
-	if (token->type != TT_SEMICOLON) {
-		ParserError(lexer, token, "Expected semicolon here");
+	if (!Expect(lexer, TT_SEMICOLON, "Expected semicolon here"))
 		return NULL;
-	}
 
 	return stat;
 }
@@ -182,12 +209,16 @@ void DumpStatement(Lexer* lexer, Statement* stat) {
 	if (stat->type == ST_EXPR)
 		DumpExpr(lexer, stat->expr);
 	else {
-		DumpToken(lexer, stat->vardecl->ident);
-		printf("= ");
 		if (stat->vardecl->init)
 			DumpExpr(lexer, stat->vardecl->init);
-		else
+		else {
+			DumpToken(lexer, stat->vardecl->ident);
+			printf("= ");
 			printf("no-init ");
+		}
+
+		if (stat->vardecl->type)
+			DumpToken(lexer, stat->vardecl->type);
 	}
 }
 

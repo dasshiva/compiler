@@ -28,7 +28,7 @@ typedef enum TokenType {
 	TT_EOF,
 	TT_NUMBER,
 	TT_PLUS, TT_MINUS, TT_ASTERISK, TT_SLASH, TT_SEMICOLON,
-	TT_LET, TT_IDENT, TT_EQUALS
+	TT_LET, TT_IDENT, TT_EQUALS, TT_COLON
 } TokenType;
 
 typedef struct Token {
