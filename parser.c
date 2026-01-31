@@ -4,16 +4,23 @@
 #include <stdlib.h>
 #include "parser.h"
 
+static void ParserError(Lexer* lexer, Token* token, const char* msg) {
+	printf("%s:%u:%u Error: %s\n", lexer->file, token->line, 
+			token->pos, msg);
+}
+
 static int IsOperator(TokenType type) {
 	switch (type) {
-		case TT_PLUS: case TT_MINUS: case TT_ASTERISK: case TT_SLASH: return 1;
+		case TT_PLUS: case TT_MINUS: case TT_ASTERISK: 
+		case TT_SLASH: case TT_EQUALS: return 1;
 		default: return 0;
 	}
 }
 
 static uint8_t infix_binding_power[] = {
-	(1 << 4) | 2,
-	(3 << 4) | 4
+	(9 << 4) | 10, // + , -
+	(11 << 4) | 12, // * , /
+	(1 << 4) | 2, // =
 };
 
 static int OpToInfixIndex(TokenType type) {
@@ -22,12 +29,13 @@ static int OpToInfixIndex(TokenType type) {
 		case TT_MINUS: return 0;
 		case TT_ASTERISK: 
 		case TT_SLASH: return 1;
+		case TT_EQUALS: return 2;
 		default: return -1;
 	}
 }
 
 static const char* BOT_TO_STRING[] = {
-	"+", "-", "*", "/"
+	"+", "-", "*", "/", "="
 };
 
 static enum BinaryOpType OpToBinop(TokenType type) {
@@ -36,6 +44,7 @@ static enum BinaryOpType OpToBinop(TokenType type) {
 		case TT_MINUS: return BOT_SUB;
 		case TT_ASTERISK: return BOT_MUL;
 		case TT_SLASH: return BOT_DIV;
+		case TT_EQUALS: return BOT_EQUALS;
 	}
 
 	return BOT_ADD; // unreachable
@@ -53,8 +62,7 @@ static Expr* makeExpr(enum ExprType type) {
 static Expr* PrattParseExpr(Lexer* lexer, int minbp) {
 	Token* tlhs = Next(lexer);
 	if (tlhs->type != TT_NUMBER && tlhs->type != TT_IDENT) {
-		printf("%s:%u:%u Expected literal or identifier here\n", lexer->file,
-				tlhs->line, tlhs->pos);
+		ParserError(lexer, tlhs, "Expected literal or identifier here");
 		return NULL;
 	}
 
@@ -67,9 +75,8 @@ static Expr* PrattParseExpr(Lexer* lexer, int minbp) {
 			break;
 
 		if (!IsOperator(op->type)) {
-			printf("%s:%u:%u Expected operator here\n", lexer->file,
-					op->line, op->pos);
-			return NULL;
+			// ParserError(lexer, op, "Expected operator here");
+			break;
 		}
 
 		uint8_t bp = infix_binding_power[OpToInfixIndex(op->type)];
@@ -97,11 +104,42 @@ static Expr* ParseExpression(Lexer* lexer) {
 	return PrattParseExpr(lexer, 0);
 }
 
+int ParseVarDecl(Lexer* lexer, Statement* stat) {
+	Token* token = Peek(lexer);
+	Expr* expr = ParseExpression(lexer);
+	if (!expr)
+		return 1;
+
+	stat->vardecl = malloc(sizeof(VarDecl));
+	if (expr->type == ET_LITERAL) {
+		stat->vardecl->ident = expr->literal;
+		stat->vardecl->init = NULL;
+	} else {
+		if (expr->binop->type != BOT_EQUALS) {
+			ParserError(lexer, token, "Expected an assignment expression here");
+			return 1;
+		}
+
+		if (expr->binop->left->type != ET_LITERAL) {
+			ParserError(lexer, token, "Expected an identifier here");
+			return 1;
+
+		}
+
+		stat->vardecl->ident = expr->binop->left->literal;
+		stat->vardecl->init = expr->binop->right;
+	}
+		
+	stat->type = ST_VARDECL;
+	return 0;
+}
+
 /* 
- * statement ::= expr ';' 
+ * statement ::= expr ';' | 
+ * "let" ident (':' type ) '=' expr ';'
  */
 
-Expr* ParseStatement(Lexer* lexer) {
+Statement* ParseStatement(Lexer* lexer) {
 	Token* token = Peek(lexer);
 
 	if (token->type == TT_EOF) {
@@ -109,18 +147,48 @@ Expr* ParseStatement(Lexer* lexer) {
 		return NULL;
 	}
 
-	Expr* expr = ParseExpression(lexer);
-	if (!expr)
+	Statement* stat = malloc(sizeof(Statement));
+	if (!stat)
 		return NULL;
+
+	switch (token->type) {
+		case TT_LET: {
+			Next(lexer);
+			if (ParseVarDecl(lexer, stat))
+				return NULL;
+			break;
+		}
+
+		default: {
+			Expr* expr = ParseExpression(lexer);
+			if (!expr) 
+				return NULL;
+			stat->type = ST_EXPR;
+			stat->expr = expr;
+		}
+
+	}
 
 	token = Next(lexer);
 	if (token->type != TT_SEMICOLON) {
-		printf("%s:%u:%u Expected semicolon here\n", lexer->file, 
-				token->line, token->pos);
+		ParserError(lexer, token, "Expected semicolon here");
 		return NULL;
 	}
 
-	return expr;
+	return stat;
+}
+
+void DumpStatement(Lexer* lexer, Statement* stat) {
+	if (stat->type == ST_EXPR)
+		DumpExpr(lexer, stat->expr);
+	else {
+		DumpToken(lexer, stat->vardecl->ident);
+		printf("= ");
+		if (stat->vardecl->init)
+			DumpExpr(lexer, stat->vardecl->init);
+		else
+			printf("no-init ");
+	}
 }
 
 void DumpExpr(Lexer* lexer, Expr* expr) {

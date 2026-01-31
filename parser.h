@@ -5,7 +5,7 @@
 
 enum BinaryOpType {
 	BOT_ADD, BOT_SUB,
-	BOT_MUL, BOT_DIV
+	BOT_MUL, BOT_DIV, BOT_EQUALS
 };
 
 struct Expr;
@@ -26,9 +26,28 @@ typedef struct Expr {
 		Token* literal;
 		BinaryOp* binop;
 	};
+
 } Expr;
 
-Expr* ParseStatement(Lexer* lexer);
-void DumpExpr(Lexer* lexer, Expr* expr); 
+enum StatementType {
+	ST_EXPR,
+	ST_VARDECL
+};
 
+typedef struct VarDecl {
+	Token* ident;
+	Expr*  init;
+} VarDecl;
+
+typedef struct Statement {
+	enum StatementType type;
+	union {
+		Expr* expr;
+		VarDecl* vardecl;
+	}; 
+} Statement;
+
+Statement* ParseStatement(Lexer* lexer);
+void DumpExpr(Lexer* lexer, Expr* expr); 
+void DumpStatement(Lexer* lexer, Statement* stat); 
 #endif

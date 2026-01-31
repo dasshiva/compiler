@@ -18,11 +18,11 @@ int main(int argc, const char** argv) {
 			break;
 		}
 
-		Expr* expr = ParseStatement(&lexer);
-		if (!expr)
+		Statement* stat = ParseStatement(&lexer);
+		if (!stat)
 			break;
 
-		DumpExpr(&lexer, expr);
+		DumpStatement(&lexer, stat);
 		printf("\n");
 	}
 
