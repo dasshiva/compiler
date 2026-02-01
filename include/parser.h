@@ -22,14 +22,16 @@ typedef struct BinaryOp {
 } BinaryOp;
 
 enum ExprType {
-	ET_LITERAL,
+	ET_INT_LITERAL,
+	ET_IDENT,
 	ET_BINARY_OP
 };
 
 typedef struct Expr {
 	enum ExprType type;
 	union {
-		Token* literal;
+		int literal;
+		char* ident;
 		BinaryOp* binop;
 	};
 	Location loc;
@@ -41,8 +43,8 @@ enum StatementType {
 };
 
 typedef struct VarDecl {
-	Token* ident;
-	Token* type;
+	const char* ident;
+	const char* type;
 	Expr*  init;
 	Location loc;
 } VarDecl;
@@ -58,6 +60,6 @@ typedef struct Statement {
 } Statement;
 
 Statement* ParseStatement(Lexer* lexer);
-void DumpExpr(Lexer* lexer, Expr* expr); 
-void DumpStatement(Lexer* lexer, Statement* stat); 
+void DumpExpr(Expr* expr); 
+void DumpStatement(Statement* stat); 
 #endif

@@ -34,18 +34,60 @@ static void SemaError(Lexer* lexer, Error* err) {
 	free(line);
 }
 
-int SemaStatement(Statement* stat, Error* err) {
-	MakeError(err, &stat->loc, "Test Error");
+enum SymbolType {
+	TYPE_VARIABLE
+};
+
+typedef struct Symbol {
+	char* name;
+	enum SymbolType type;
+	uint32_t flags;
+} Symbol;
+
+Symbol* MakeSymbol(char* name, enum SymbolType type, uint32_t flags) {
+	Symbol* ret = malloc(sizeof(Symbol));
+	if (!ret)
+		return NULL;
+
+	ret->name = name;
+	ret->type = type;
+	ret->flags = flags;
+}
+
+int SemaExpression(Statement* stat, Vector* symtab, Error* err) {
 	return 0;
 }
+
+int SemaVarDecl(Statement* stat, Vector* symtab, Error* err) {
+	VarDecl* vardecl = stat->vardecl;
+
+	return 0;
+}
+
+int SemaStatement(Statement* stat, Vector* symtab, Error* err) {
+	MakeError(err, &stat->loc, "Test Error");
+	switch (stat->type) {
+		case ST_VARDECL: return SemaVarDecl(stat, symtab, err);
+		case ST_EXPR: return SemaExpression(stat, symtab, err);
+		default: {
+			printf("SemaStatement(): Unknown statement type\n");
+			break;
+		}
+	}
+
+	return 0;
+}
+
 
 int SemanticAnalyse(Lexer* lexer, Vector* statements) {
 	if (!VectorLength(statements))
 		return 1;
 
+	Vector* symtab = NewVector();
+
 	for (uint32_t i = 0; i < VectorLength(statements); i++) {
 		Error err;
-		if (!SemaStatement(Get(statements, i), &err))
+		if (!SemaStatement(Get(statements, i), symtab, &err))
 			SemaError(lexer, &err);
 	}
 

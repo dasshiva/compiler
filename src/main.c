@@ -26,7 +26,7 @@ int main(int argc, const char** argv) {
 
 		Append(stats, stat);
 
-		DumpStatement(&lexer, stat);
+		DumpStatement(stat);
 		printf("\n");
 	}
 

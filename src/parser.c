@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "parser.h"
+#include <ctype.h>
 
 static void ParserError(Lexer* lexer, Token* token, const char* msg) {
 	printf("%s:%u:%u\nError: %s\n", lexer->file, token->line, 
@@ -89,17 +90,127 @@ static Expr* makeExpr(enum ExprType type) {
 	return expr;
 }
 
+int ToDecimal(int digit, int base) {
+	if (digit < 0)
+		return -1;
+
+	if (base == 2) {
+		if (digit < 2)
+			return digit;
+		else
+			return -1;
+	}
+
+	else if (base == 8) {
+		if (digit < 8)
+			return digit;
+		else
+			return -1;
+	}
+
+	else if (base == 10) {
+		if (digit < 10)
+			return digit;
+		else
+			return -1;
+	}
+
+	else { // base = 16
+		switch (digit) {
+			case 0: case 1: case 2: case 3: case 4: case 5: case 6:
+			case 7: case 8: case 9: return digit;
+			case 'A' - '0': case 'a' - '0': return 10;
+			case 'B' - '0': case 'b' - '0': return 11;
+			case 'C' - '0': case 'c' - '0': return 12;
+			case 'D' - '0': case 'd' - '0': return 13;
+			case 'E' - '0': case 'e' - '0': return 14;
+			case 'F' - '0': case 'f' - '0': return 15;
+			default: return -1;
+		}
+	}
+}
+
+int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr) {
+	char* source = lexer->source + token->offset;
+	int base = 10;
+
+	if (*source == '0') { 
+		if (token->length == 1) {
+			expr->literal = 0;
+			return 1;
+		}
+
+		source++;
+		switch (*source) {
+			case 'b': case 'B' : base = 2; token->length -= 2;  break;
+			case 'x': case 'X' : base = 16; token->length -= 2; break;
+			default: {
+				if (isdigit(*source)) {
+					// move source back, so that the later source++ puts us
+					// back in the same place
+					source--;
+					base = 8;
+					token->length -= 1;
+				}
+				else {
+					ParserError(lexer, token, "Invalid base specifier"
+							" in integer literal");
+					return 0;
+				}
+			}
+		}
+		source++;
+	}
+
+	int literal = 0;
+	for (uint32_t idx = 0; idx < token->length; idx++) {
+		int d = ToDecimal(*source - '0', base);
+		if (d == -1) {
+			ParserError(lexer, token, "Non-digit present in number literal");
+			return 1;
+		}
+
+		literal = literal * base + d;
+		source++;
+	}
+
+	expr->literal = literal;
+	return 1;
+}
+
+int ParseIdent(Lexer* lexer, Token* token, Expr* expr) {
+	expr->ident = malloc(sizeof(char) * (token->length + 1));
+	if (!expr->ident)
+		return 0;
+
+	memcpy(expr->ident, lexer->source + token->offset, token->length);
+	expr->ident[token->length] = '\0';
+	return 1;
+}
+
 static Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 	Expr* lhs = NULL;
 	if (!expr) {
 		Token* tlhs = Next(lexer);
-		if (tlhs->type != TT_NUMBER && tlhs->type != TT_IDENT) {
-			ParserError(lexer, tlhs, "Expected literal or identifier here");
-			return NULL;
-		}
+		switch (tlhs->type) {
+			case TT_NUMBER: { 
+				lhs = makeExpr(ET_INT_LITERAL);
+				if (!ParseIntLiteral(lexer, tlhs, lhs))
+					return NULL;
 
-		lhs = makeExpr(ET_LITERAL);
-		lhs->literal = tlhs;
+				break;
+			}
+			case TT_IDENT: {
+				lhs = makeExpr(ET_IDENT);
+				if (!ParseIdent(lexer, tlhs, lhs))
+					return NULL;
+				break;
+			}
+			default: {
+				ParserError(lexer, tlhs, "Expected literal or identifier here");
+				return NULL;
+			}
+		}
 
 		lhs->loc.line = tlhs->line;
 		lhs->loc.pos = tlhs->pos;
@@ -126,6 +237,8 @@ static Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 
 		Next(lexer);
 		Expr* rhs = PrattParseExpr(lexer, NULL, r_bp);
+		if (!rhs)
+			return NULL;
 
 		Expr* tmp = makeExpr(ET_BINARY_OP);
 		tmp->loc.line = op->line;
@@ -181,11 +294,12 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 		return 1;
 	}
 
-	Expr* expr = (op->type == TT_SEMICOLON) ? NULL : makeExpr(ET_LITERAL);
+	Expr* expr = (op->type == TT_SEMICOLON) ? NULL : makeExpr(ET_IDENT);
 	if (!expr)
 		goto no_init;
 
-	expr->literal = token;
+	if (!ParseIdent(lexer, token, expr))
+		return 1;
 
 	expr = ParseExpression(lexer, expr);
 	if (!expr)
@@ -193,9 +307,18 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 
 no_init:
 	stat->vardecl = malloc(sizeof(VarDecl));
-	stat->vardecl->ident = token;
 	stat->vardecl->init = expr;
-	stat->vardecl->type = ty;
+
+	// Trick ParseIdent into parsing these for us
+	Expr tmp;
+	ParseIdent(lexer, token, &tmp);
+	stat->vardecl->ident = tmp.ident;
+	if (ty) {
+		ParseIdent(lexer, ty, &tmp);
+		stat->vardecl->type = tmp.ident;
+	} else
+		stat->vardecl->type = NULL;
+
 	return 0;
 }
 
@@ -242,29 +365,31 @@ Statement* ParseStatement(Lexer* lexer) {
 	return stat;
 }
 
-void DumpStatement(Lexer* lexer, Statement* stat) {
+void DumpStatement(Statement* stat) {
 	if (stat->type == ST_EXPR)
-		DumpExpr(lexer, stat->expr);
+		DumpExpr(stat->expr);
 	else {
 		if (stat->vardecl->init)
-			DumpExpr(lexer, stat->vardecl->init);
+			DumpExpr(stat->vardecl->init);
 		else {
-			DumpToken(lexer, stat->vardecl->ident);
+			printf("%s ", stat->vardecl->ident);
 			printf("= ");
 			printf("no-init ");
 		}
 
 		if (stat->vardecl->type)
-			DumpToken(lexer, stat->vardecl->type);
+			printf("%s ", stat->vardecl->type);
 	}
 }
 
-void DumpExpr(Lexer* lexer, Expr* expr) {
-	if (expr->type == ET_LITERAL)
-		DumpToken(lexer, expr->literal);
+void DumpExpr(Expr* expr) {
+	if (expr->type == ET_INT_LITERAL)
+		printf("%d ", expr->literal);
+	else if (expr->type == ET_IDENT)
+		printf("%s ", expr->ident);
 	else {
-		DumpExpr(lexer, expr->binop->left);
-		DumpExpr(lexer, expr->binop->right);
+		DumpExpr(expr->binop->left);
+		DumpExpr(expr->binop->right);
 		printf("%s ", BOT_TO_STRING[expr->binop->type]); 
 	}
 }
