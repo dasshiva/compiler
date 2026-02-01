@@ -225,6 +225,9 @@ Statement* ParseStatement(Lexer* lexer) {
 		}
 
 		default: {
+			stat->loc.line = token->line;
+			stat->loc.pos = token->pos;
+
 			Expr* expr = ParseExpression(lexer, NULL);
 			if (!expr) 
 				return NULL;
