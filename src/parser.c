@@ -316,6 +316,8 @@ no_init:
 	if (ty) {
 		ParseIdent(lexer, ty, &tmp);
 		stat->vardecl->type = tmp.ident;
+		stat->vardecl->loc_type.line = ty->line;
+		stat->vardecl->loc_type.pos = ty->pos;
 	} else
 		stat->vardecl->type = NULL;
 

@@ -47,6 +47,7 @@ typedef struct VarDecl {
 	const char* type;
 	Expr*  init;
 	Location loc;
+	Location loc_type;
 } VarDecl;
 
 typedef struct Statement {

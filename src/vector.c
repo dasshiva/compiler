@@ -30,7 +30,7 @@ uint32_t VectorLength(Vector* vec) {
 	return vec->size;
 }
 
-void Append(Vector* vec, void* data) {
+void Append(Vector* vec, const void* data) {
 	if (vec->size >= vec->capacity) {
 		vec->capacity += 100;
 		vec->data = realloc(vec->data, vec->capacity * sizeof(void*));
@@ -38,7 +38,7 @@ void Append(Vector* vec, void* data) {
 			return;
 	}
 
-	vec->data[vec->size] = data;
+	vec->data[vec->size] = (void*) data;
 	vec->size++;
 }
 
@@ -47,4 +47,13 @@ void* Get(Vector* vec, uint32_t index) {
 		return INVALID_INDEX;
 
 	return vec->data[index];
+}
+
+void* Pop(Vector* vec) {
+	if (!vec->size)
+		return INVALID_INDEX;
+
+	void* data = vec->data[vec->size - 1];
+	vec->size--;
+	return data;
 }

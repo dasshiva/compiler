@@ -11,9 +11,10 @@ typedef struct Vector {
 
 Vector*  NewVector();
 uint32_t VectorLength(Vector* vec);
-void     Append(Vector* vec, void* data);
+void     Append(Vector* vec, const void* data);
 void*    Get(Vector* vec, uint32_t index);
 void     DeleteVector(Vector* vec);
+void*    Pop(Vector* vec);
 
 #define INVALID_INDEX ((void*)-1)
 

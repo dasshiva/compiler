@@ -1,4 +1,4 @@
 94 + 9 - 31 / 0x59 * 2 + hello;
 let hello = 9;
 let p;
-let new: i32 = 8 % 4;
+let new: i33 = 8 % 4;
