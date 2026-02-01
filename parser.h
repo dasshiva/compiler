@@ -5,7 +5,7 @@
 
 enum BinaryOpType {
 	BOT_ADD, BOT_SUB,
-	BOT_MUL, BOT_DIV, BOT_EQUALS
+	BOT_MUL, BOT_DIV, BOT_EQUALS, BOT_MOD
 };
 
 struct Expr;

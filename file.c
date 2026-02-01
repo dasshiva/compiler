@@ -1,4 +1,4 @@
 9 + 9 - 3 / 5 * 2 + hello;
-let hello = 9;
+let hello  9;
 let p;
-let new: i32 = 8;
+let new: i32 = 8 % 4;

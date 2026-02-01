@@ -2,6 +2,7 @@
 #define __LEXER_H__
 
 #include <stdint.h>
+#include "vector.h"
 
 typedef enum LexerError {
 	SUCCESS,
@@ -28,7 +29,7 @@ typedef enum TokenType {
 	TT_EOF,
 	TT_NUMBER,
 	TT_PLUS, TT_MINUS, TT_ASTERISK, TT_SLASH, TT_SEMICOLON,
-	TT_LET, TT_IDENT, TT_EQUALS, TT_COLON
+	TT_LET, TT_IDENT, TT_EQUALS, TT_COLON, TT_PERCENT
 } TokenType;
 
 typedef struct Token {
@@ -43,6 +44,7 @@ typedef struct Lexer {
 	char*    source; // the code from the file - mapped into memory
 	char*    file;   // the name of the file that the lexer is working on
 	Token*   peek;   // the next token filled in by a call to Peek()
+	Vector*  extent; // a vector of LineExtents
 	uint32_t offset; // offset into Lexer.source we are currently at
 	uint32_t size;   // the size of the file we are working on, in bytes
 	uint32_t line;   // the line we are at in the code (lines end with '\n')
@@ -56,4 +58,9 @@ Token* Peek(Lexer* lexer);
 void DumpToken(Lexer* lexer, Token* token); 
 LexerError DeleteLexer(Lexer* lexer);
 
+typedef struct LineExtent {
+	uint32_t line;
+	uint32_t offset;
+	uint32_t length;
+} LineExtent;
 #endif

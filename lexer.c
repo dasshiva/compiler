@@ -19,6 +19,16 @@ static void die(const char* msg) {
 	exit(1);
 }
 
+static LineExtent* makeLE(uint32_t line, uint32_t offset) {
+	LineExtent* ret = malloc(sizeof(LineExtent));
+	if (!ret)
+		return NULL;
+
+	ret->line = line;
+	ret->offset = offset;
+	ret->length = 0;
+}
+
 LexerError NewLexer(const char* name, Lexer* lexer) {
 	if (!name || !lexer)
 		return REQUIRED_PARAM_NULL;
@@ -58,6 +68,9 @@ LexerError NewLexer(const char* name, Lexer* lexer) {
 	lexer->pos = 1;
 	lexer->peek = NULL;
 	lexer->flags = 0;
+	lexer->extent = NewVector();
+
+	Append(lexer->extent, makeLE(1, 0));
 
 	memcpy(lexer->file, name, len);
 	lexer->file[len] ='\0';
@@ -111,7 +124,15 @@ static void SkipSpace(Lexer* lexer) {
 			switch (c) {
 				case '\r' : case '\f' :
 				case ' '  : lexer->pos++; break;
-				case '\n' : lexer->line++; lexer->pos = 1; break;
+				case '\n' : {
+					LineExtent* line = Get(lexer->extent, lexer->line - 1);
+					line->length = lexer->offset - line->offset;
+
+					lexer->line++; 
+					lexer->pos = 1; 
+					Append(lexer->extent, makeLE(lexer->line, lexer->offset + 1));
+					break;
+				}
 				case '\t' : {
 					// Assume that tab stop is 8 spaces
 					lexer->pos -= lexer->pos % 8;
@@ -233,6 +254,7 @@ Token* Next(Lexer* lexer) {
 		case ';' : return makeToken(lexer, TT_SEMICOLON, 1);
 		case '=' : return makeToken(lexer, TT_EQUALS, 1);
 		case ':' : return makeToken(lexer, TT_COLON, 1);
+		case '%' : return makeToken(lexer, TT_PERCENT, 1);
 		default: {
 			if (isdigit(c))
 				return ReadNumber(lexer);
@@ -256,7 +278,7 @@ Token* Peek(Lexer* lexer) {
 
 static const char* T2S[] = {
 	"EOF", "Number", "+", "-", "*", "/", ";", 
-	"let", "Identifier", "=", ":"
+	"let", "Identifier", "=", ":", "%"
 };
 
 void DumpToken(Lexer* lexer, Token* token) {

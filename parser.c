@@ -2,11 +2,30 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "parser.h"
 
 static void ParserError(Lexer* lexer, Token* token, const char* msg) {
-	printf("%s:%u:%u Error: %s\n", lexer->file, token->line, 
+	printf("%s:%u:%u\nError: %s\n", lexer->file, token->line, 
 			token->pos, msg);
+	
+	LineExtent* le = Get(lexer->extent, token->line - 1);
+	if (le == INVALID_INDEX)
+		return;
+
+	char* source = lexer->source + le->offset;
+	// If line length is not known, assume it ends where the token ends
+	if (!le->length) 
+		le->length = token->offset - le->offset + token->length;
+
+	char* line = malloc(sizeof(char) * (le->length + 1));
+	memcpy(line, source, le->length);
+	line[le->length] = '\0';
+
+	printf("%s\n", line);
+	for (uint32_t i = 0; i < token->pos - 1; i++) { printf(" "); }
+	printf("^\n");
+	free(line);
 }
 
 int Expect(Lexer* lexer, TokenType type, const char* msg) {
@@ -21,7 +40,7 @@ int Expect(Lexer* lexer, TokenType type, const char* msg) {
 static int IsOperator(TokenType type) {
 	switch (type) {
 		case TT_PLUS: case TT_MINUS: case TT_ASTERISK: 
-		case TT_SLASH: case TT_EQUALS: return 1;
+		case TT_SLASH: case TT_EQUALS: case TT_PERCENT: return 1;
 		default: return 0;
 	}
 }
@@ -29,13 +48,14 @@ static int IsOperator(TokenType type) {
 static uint8_t infix_binding_power[] = {
 	(9 << 4) | 10, // + , -
 	(11 << 4) | 12, // * , /
-	(1 << 4) | 2, // =
+	(2 << 4) | 1, // =
 };
 
 static int OpToInfixIndex(TokenType type) {
 	switch (type) {
 		case TT_PLUS: 
 		case TT_MINUS: return 0;
+		case TT_PERCENT:
 		case TT_ASTERISK: 
 		case TT_SLASH: return 1;
 		case TT_EQUALS: return 2;
@@ -44,7 +64,7 @@ static int OpToInfixIndex(TokenType type) {
 }
 
 static const char* BOT_TO_STRING[] = {
-	"+", "-", "*", "/", "="
+	"+", "-", "*", "/", "=", "%"
 };
 
 static enum BinaryOpType OpToBinop(TokenType type) {
@@ -53,6 +73,7 @@ static enum BinaryOpType OpToBinop(TokenType type) {
 		case TT_MINUS: return BOT_SUB;
 		case TT_ASTERISK: return BOT_MUL;
 		case TT_SLASH: return BOT_DIV;
+		case TT_PERCENT: return BOT_MOD;
 		case TT_EQUALS: return BOT_EQUALS;
 	}
 
@@ -139,12 +160,13 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 			ParserError(lexer, ty, "Expected a type name here");
 			return 1;
 		}
+
+		op = Peek(lexer); // move to the next token
 	}
-	else {
-		if (op->type != TT_EQUALS && op->type != TT_SEMICOLON) {
-			ParserError(lexer, op, "Expected '=' or ';' here");
-			return 1;
-		}
+	
+	if (op->type != TT_EQUALS && op->type != TT_SEMICOLON) {
+		ParserError(lexer, op, "Expected '=' or ';' here");
+		return 1;
 	}
 
 	Expr* expr = (op->type == TT_SEMICOLON) ? NULL : makeExpr(ET_LITERAL);
@@ -199,7 +221,7 @@ Statement* ParseStatement(Lexer* lexer) {
 		}
 	}
 
-	if (!Expect(lexer, TT_SEMICOLON, "Expected semicolon here"))
+	if (!Expect(lexer, TT_SEMICOLON, "Expected ';' here"))
 		return NULL;
 
 	return stat;
