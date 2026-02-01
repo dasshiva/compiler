@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "sema.h"
 #include <stddef.h>
 #include <stdio.h>
 
@@ -11,6 +11,8 @@ int main(int argc, const char** argv) {
 		return 1;
 
 	Token* token = NULL;
+	Vector* stats = NewVector();
+
 	while (1) {
 		token = Peek(&lexer);
 		if (token->type == TT_EOF) {
@@ -22,9 +24,14 @@ int main(int argc, const char** argv) {
 		if (!stat)
 			break;
 
+		Append(stats, stat);
+
 		DumpStatement(&lexer, stat);
 		printf("\n");
 	}
+
+	if (!SemanticAnalyse(&lexer, stats))
+		return 2;
 
 	DeleteLexer(&lexer);
 	return 0;

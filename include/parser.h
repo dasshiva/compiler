@@ -3,6 +3,11 @@
 
 #include "lexer.h"
 
+typedef struct Location {
+	uint32_t line;
+	uint32_t pos;
+} Location;
+
 enum BinaryOpType {
 	BOT_ADD, BOT_SUB,
 	BOT_MUL, BOT_DIV, BOT_EQUALS, BOT_MOD
@@ -13,6 +18,7 @@ typedef struct BinaryOp {
 	enum BinaryOpType type;
 	struct Expr* left;
 	struct Expr* right;
+	Location loc; 
 } BinaryOp;
 
 enum ExprType {
@@ -26,7 +32,7 @@ typedef struct Expr {
 		Token* literal;
 		BinaryOp* binop;
 	};
-
+	Location loc;
 } Expr;
 
 enum StatementType {
@@ -38,6 +44,7 @@ typedef struct VarDecl {
 	Token* ident;
 	Token* type;
 	Expr*  init;
+	Location loc;
 } VarDecl;
 
 typedef struct Statement {
@@ -45,7 +52,9 @@ typedef struct Statement {
 	union {
 		Expr* expr;
 		VarDecl* vardecl;
-	}; 
+	};
+
+	Location loc;
 } Statement;
 
 Statement* ParseStatement(Lexer* lexer);

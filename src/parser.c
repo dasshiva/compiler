@@ -100,6 +100,10 @@ static Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 
 		lhs = makeExpr(ET_LITERAL);
 		lhs->literal = tlhs;
+
+		lhs->loc.line = tlhs->line;
+		lhs->loc.pos = tlhs->pos;
+
 	}  else { 
 		lhs = expr;
 	}
@@ -124,7 +128,12 @@ static Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 		Expr* rhs = PrattParseExpr(lexer, NULL, r_bp);
 
 		Expr* tmp = makeExpr(ET_BINARY_OP);
+		tmp->loc.line = op->line;
+		tmp->loc.pos = op->pos;
+
 		tmp->binop = malloc(sizeof(BinaryOp));
+		tmp->binop->loc.line = op->line;
+		tmp->binop->loc.pos = op->pos;
 		tmp->binop->type = OpToBinop(op->type);
 		tmp->binop->left = lhs;
 		tmp->binop->right = rhs;
@@ -147,6 +156,9 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 		ParserError(lexer, token, "Expected an identifier");
 		return 1;
 	}
+
+	stat->loc.line = token->line;
+	stat->loc.pos = token->pos;
 
 	Next(lexer);
 
