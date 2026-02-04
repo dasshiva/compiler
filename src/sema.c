@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "types.h"
 
 typedef struct Error {
 	Location* loc;
@@ -37,19 +36,6 @@ static void SemaError(Lexer* lexer, Error* err) {
 	free(line);
 }
 
-enum SymbolType {
-	TYPE_VARIABLE, // A variable declaration
-	TYPE_TYPEDEF,  // A definition for a  type, user-defined or built-in
-};
-
-typedef struct Symbol {
-	const char* name;
-	enum SymbolType type;
-	uint32_t flags;
-	const Type* utype; // the underlying type, or an actual kind of type depending
-				 // on the value of Symbol.type
-} Symbol;
-
 Symbol* MakeSymbol(const char* name, enum SymbolType type, uint32_t flags) {
 	Symbol* ret = malloc(sizeof(Symbol));
 	if (!ret)
@@ -60,7 +46,7 @@ Symbol* MakeSymbol(const char* name, enum SymbolType type, uint32_t flags) {
 	ret->flags = flags;
 }
 
-static const Type* GetType(Vector* symtab, const char* name) {
+const Type* GetType(Vector* symtab, const char* name) {
 	for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
 		Symbol* sym = Get(symtab, idx);
 		if (sym->type != TYPE_TYPEDEF)
@@ -73,7 +59,7 @@ static const Type* GetType(Vector* symtab, const char* name) {
 	return NULL;
 }
 
-static const Symbol* GetVariable(Vector* symtab, const char* name) {
+const Symbol* GetVariable(Vector* symtab, const char* name) {
 	for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
 		Symbol* sym = Get(symtab, idx);
 		if (sym->type != TYPE_VARIABLE)
@@ -269,9 +255,9 @@ static int SemaStatement(Statement* stat, Vector* symtab, Error* err) {
 }
 
 
-int SemanticAnalyse(Lexer* lexer, Vector* statements) {
+Vector* SemanticAnalyse(Lexer* lexer, Vector* statements) {
 	if (!VectorLength(statements))
-		return 1;
+		return NULL;
 
 	Vector* symtab = NewVector();
 	for (int i = 0; i < len_builtins; i++) {
@@ -286,5 +272,5 @@ int SemanticAnalyse(Lexer* lexer, Vector* statements) {
 			SemaError(lexer, &err);
 	}
 
-	return 1;
+	return symtab;
 }

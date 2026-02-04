@@ -10,7 +10,8 @@ typedef struct Location {
 
 enum BinaryOpType {
 	BOT_ADD, BOT_SUB,
-	BOT_MUL, BOT_DIV, BOT_EQUALS, BOT_MOD
+	BOT_MUL, BOT_DIV, BOT_EQUALS, BOT_MOD,
+	BOT_MAX
 };
 
 struct Expr;
