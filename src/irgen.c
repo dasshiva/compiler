@@ -1,13 +1,11 @@
 #include "irgen.h"
+#include "counter.h"
+
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 
-static int counter = 1;
-int GetCounter() {
-	int ctr = counter++;
-	return ctr;
-}
-
+Counter counter;
 
 void OpImm(IRInst* inst, int idx, int imm) {
 	inst->operands[idx].type = OP_IMM;
@@ -37,6 +35,7 @@ static enum IRInstruction BOT2IR(enum BinaryOpType ty) {
 		case BOT_SUB: return IR_SUB;
 		case BOT_MUL: return IR_MUL;
 		case BOT_DIV: return IR_DIV;
+		case BOT_EQUALS: return IR_STORE;
 		case BOT_MOD: return IR_MODULUS;
 		default: {
 			printf("BOT2IR(): Unknown value of ty = %d\n", ty);
@@ -46,12 +45,17 @@ static enum IRInstruction BOT2IR(enum BinaryOpType ty) {
 	}
 }
 
+typedef struct ResourceMetadata {
+	Type* type;
+	int id;
+} RMD;
+
 static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 	switch (expr->type) {
 		case ET_INT_LITERAL: {
 			IRInst* ret = MakeIRInst(IR_NEW, 0);
 			OpImm(ret, 0, 4);
-			ret->id = GetCounter();
+			ret->id = GetCounter(&counter);
 			Append(IR, ret);
 
 			IRInst* store = MakeIRInst(IR_STORE, 0);
@@ -70,17 +74,44 @@ static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 
 			enum IRInstruction inst = BOT2IR(expr->binop->type);
 			IRInst* ret = MakeIRInst(inst, 0);
-			OpResource(ret, 0, left);
-			OpResource(ret, 1, right);
-			ret->id = GetCounter();
-			Append(IR, ret);
+			if (inst != IR_STORE) {
+				OpResource(ret, 0, left);
+				OpResource(ret, 1, right);
+				ret->id = GetCounter(&counter);
+				Append(IR, ret);
+				return ret->id;
+			} else {
+				OpResource(ret, 0, left);
+				Type* type = NULL;
 
-			return ret->id;
+				for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
+					Symbol* symbol = Get(symtab, idx);
+					if (symbol->type == TYPE_VARIABLE) {
+						RMD* rmd = symbol->data;
+						if (rmd->id == left) {
+							type = symbol->utype;
+							break;
+						}
+					}
+				}
+
+				if (!type) {
+					printf("GenIRExpr(): BOT_EQUALS, no type for assignee\n");
+					return 0;
+				}
+
+				OpImm(ret, 1, type->size);
+				OpResource(ret, 2, right);
+				Append(IR, ret);
+				return left;
+			}
+
+			break;
 		}
 
 		case ET_IDENT: {
-			printf("GenIRExpr(): codegen is not implemented for ET_IDENT\n");
-			return 0;
+			RMD* rmd = GetVariable(symtab, expr->ident)->data;
+			return rmd->id;
 		}
 	}
 
@@ -89,9 +120,22 @@ static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 
 static int GenIRVarDecl(Vector* IR, VarDecl* vardecl, 
 		Vector* symtab) {
-	printf("GenIRVarDecl(): Codegen is not implemented for "
-			"variable declarations\n");
-	return 0; 
+	RMD* rmd = malloc(sizeof(RMD));
+	rmd->id = GetCounter(&counter);
+	rmd->type = GetType(symtab, vardecl->type);
+	
+	IRInst* inst = MakeIRInst(IR_NEW, 0);
+	inst->id = rmd->id;
+	OpImm(inst, 0, rmd->type->size);
+	Append(IR, inst);
+
+	Symbol* var = GetVariable(symtab, vardecl->ident);
+	var->data = rmd;
+
+	if (vardecl->init) 
+		GenIRExpr(IR, vardecl->init, symtab);
+	
+	return 1; 
 }
 
 Vector* GenIR(Vector* stats, Vector* symtab) {
@@ -99,6 +143,7 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 		return NULL;
 
 	Vector* IR = NewVector();
+	ResetCounter(&counter, 1);
 
 	for (uint32_t idx = 0; idx < VectorLength(stats); idx++) {
 		Statement* st = Get(stats, idx);
@@ -111,7 +156,7 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 			}
 
 			case ST_VARDECL: {
-				if (GenIRVarDecl(IR, st->vardecl, symtab))
+				if (!GenIRVarDecl(IR, st->vardecl, symtab))
 					return NULL;
 			
 				break;

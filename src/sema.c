@@ -219,6 +219,7 @@ static int SemaVarDecl(Statement* stat, Vector* symtab, Error* err) {
 	}
 
 	Symbol* sym = MakeSymbol(vardecl->ident, TYPE_VARIABLE, 0);
+	Append(symtab, sym);
 	sym->utype = (ty) ? ty : NULL;
 
 	if (vardecl->init) {
@@ -232,6 +233,8 @@ static int SemaVarDecl(Statement* stat, Vector* symtab, Error* err) {
 					"variable %s and initializer expression", vardecl->ident);
 				return 0;
 			}
+			else
+				sym->utype = type;
 		}
 		else
 			sym->utype = type;

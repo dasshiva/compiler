@@ -14,6 +14,7 @@ typedef struct Symbol {
 	enum SymbolType type;
 	uint32_t flags;
 	const Type* utype;
+	void* data;
 } Symbol;
 
 Vector* SemanticAnalyse(Lexer* lexer, Vector* statements);
