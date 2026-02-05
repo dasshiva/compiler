@@ -27,6 +27,8 @@ static LineExtent* makeLE(uint32_t line, uint32_t offset) {
 	ret->line = line;
 	ret->offset = offset;
 	ret->length = 0;
+
+	return ret;
 }
 
 LexerError NewLexer(const char* name, Lexer* lexer) {

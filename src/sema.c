@@ -44,6 +44,8 @@ Symbol* MakeSymbol(const char* name, enum SymbolType type, uint32_t flags) {
 	ret->name = name;
 	ret->type = type;
 	ret->flags = flags;
+
+	return ret;
 }
 
 const Type* GetType(Vector* symtab, const char* name) {
