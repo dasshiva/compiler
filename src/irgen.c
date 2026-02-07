@@ -1,33 +1,9 @@
-#include "irgen.h"
-#include "counter.h"
+#include "irgenhelpers.h"
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-
-Counter counter;
-
-void OpImm(IRInst* inst, int idx, int imm) {
-	inst->operands[idx].type = OP_IMM;
-	inst->operands[idx].imm = imm;
-}
-
-void OpResource(IRInst* inst, int idx, int id) {
-	inst->operands[idx].type = OP_RESOURCE;
-	inst->operands[idx].resource = id;
-}
-
-static IRInst* MakeIRInst(enum IRInstruction inst, 
-		uint32_t flags) {
-	IRInst* ret = malloc(sizeof(IRInst));
-	if (!ret)
-		return NULL;
-
-	ret->inst = inst;
-	ret->flags = flags;
-	ret->id = 0;
-	return ret;
-}
+#include <limits.h>
 
 static enum IRInstruction BOT2IR(enum BinaryOpType ty) {
 	switch(ty) {
@@ -50,76 +26,61 @@ typedef struct ResourceMetadata {
 	int id;
 } RMD;
 
-static uint64_t GenIRExprRecurse(Vector* IR, Expr* expr, 
+static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr, 
 		Vector* symtab, int level) {
 
 	switch (expr->type) {
 		case ET_INT_LITERAL: {
-			IRInst* ret = MakeIRInst(IR_NEW, 0);
-			OpImm(ret, 0, 4);
-			ret->id = GetCounter(&counter);
-			Append(IR, ret);
-
-			IRInst* store = MakeIRInst(IR_STORE, 0);
-			OpResource(store, 0, ret->id);
-			OpImm(store, 1, 4);
-			OpImm(store, 2, expr->literal);
-			Append(IR, store);
-
+			uint32_t ret = IRConst(IR, &TYPE_I32, expr->literal);
 			if (!level)
 				goto clean_exit;
 
-			return ret->id;
+			return ret;
 		}
 
 		case ET_BINARY_OP: {
 			BinaryOp* binop = expr->binop;
-			int left = GenIRExprRecurse(IR, binop->left, symtab, level + 1);
-			int right = GenIRExprRecurse(IR, binop->right, symtab, level + 1);
+			uint32_t left = GenIRExprRecurse(IR, binop->left, 
+					symtab, level + 1);
+			uint32_t right = GenIRExprRecurse(IR, binop->right, 
+					symtab, level + 1);
 
-			enum IRInstruction inst = BOT2IR(expr->binop->type);
-			IRInst* ret = MakeIRInst(inst, 0);
-			if (inst != IR_STORE) {
-				OpResource(ret, 0, left);
-				OpResource(ret, 1, right);
-				ret->id = GetCounter(&counter);
-				Append(IR, ret);
+			uint32_t ret = 0;
+			switch (expr->binop->type) {
+				case BOT_ADD: ret = IRAdd(IR, left, right, NULL); break;
+				case BOT_SUB: ret = IRSub(IR, left, right, NULL); break;
+				case BOT_MUL: ret = IRMul(IR, left, right, NULL); break;
+				case BOT_DIV: ret = IRDiv(IR, left, right, NULL); break;
+				case BOT_MOD: ret = IRMod(IR, left, right, NULL); break;
+				case BOT_EQUALS: {
+					RMD* saved = NULL;
+					for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
+						Symbol* var = Get(symtab, idx);
+						if (var->type != TYPE_VARIABLE)
+							continue;
 
-				if (!level)
-					goto clean_exit;
-
-				return ret->id;
-			} else {
-				OpResource(ret, 0, left);
-				Type* type = NULL;
-
-				for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
-					Symbol* symbol = Get(symtab, idx);
-					if (symbol->type == TYPE_VARIABLE) {
-						RMD* rmd = symbol->data;
-						if (rmd->id == left) {
-							type = symbol->utype;
+						RMD* rmd = var->data;
+						if (left == rmd->id) {
+							saved = rmd;
 							break;
 						}
 					}
-				}
 
-				if (!type) {
-					printf("GenIRExpr(): BOT_EQUALS, no type for assignee\n");
+					saved->id = right;
+					ret = saved->id;
+					break;
+				}
+				default: {
+					printf("GenIRExprRecurse(); IRGen not implemented for "
+						"expr->binop->type = %d\n", expr->binop->type);
 					return 0;
 				}
-
-				OpImm(ret, 1, type->size);
-				OpResource(ret, 2, right);
-				Append(IR, ret);
-
-				if (!level)
-					goto clean_exit;
-
-				return left;
 			}
 
-			break;
+			if (!level)
+				goto clean_exit;
+
+			return ret;
 		}
 
 		case ET_IDENT: {
@@ -128,6 +89,12 @@ static uint64_t GenIRExprRecurse(Vector* IR, Expr* expr,
 				goto clean_exit;
 
 			return rmd->id;
+		}
+
+		default: {
+			printf("IRGenExprRecurse(): expr->type %d does not "
+				"have IRGen implemented for it", expr->type);
+			return 0;
 		}
 	}
 
@@ -141,14 +108,10 @@ static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 
 static int GenIRVarDecl(Vector* IR, VarDecl* vardecl, 
 		Vector* symtab) {
+
 	RMD* rmd = malloc(sizeof(RMD));
-	rmd->id = GetCounter(&counter);
 	rmd->type = GetType(symtab, vardecl->type);
-	
-	IRInst* inst = MakeIRInst(IR_NEW, 0);
-	inst->id = rmd->id;
-	OpImm(inst, 0, rmd->type->size);
-	Append(IR, inst);
+	rmd->id = UINT32_MAX;
 
 	Symbol* var = GetVariable(symtab, vardecl->ident);
 	var->data = rmd;
@@ -165,7 +128,6 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 		return NULL;
 
 	Vector* IR = NewVector();
-	ResetCounter(&counter, 1);
 
 	for (uint32_t idx = 0; idx < VectorLength(stats); idx++) {
 		Statement* st = Get(stats, idx);
@@ -173,7 +135,6 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 			case ST_EXPR: {
 				if (!GenIRExpr(IR, st->expr, symtab))
 					return NULL;
-				GenIRExpr(IR, st->expr, symtab);
 				break;
 			}
 
@@ -197,7 +158,7 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 
 const char* IR2S[] = {
 	"new", "store", "load", "add",
-	"sub", "mul", "div", "mod"
+	"sub", "mul", "div", "mod", "constant"
 };
 
 const int lenmap[] = {
@@ -207,19 +168,39 @@ const int lenmap[] = {
 void PrintIR(Vector* IR) {
 	for (uint32_t idx = 0; idx < VectorLength(IR); idx++) {
 		IRInst* inst = Get(IR, idx);
-		if (inst->id)
-			printf("t%d = ", inst->id);
+		switch (inst->code) {
+			case IR_ADD: 
+			case IR_SUB:
+			case IR_MUL:
+			case IR_DIV:
+			case IR_MODULUS: {
+				IRBinaryOp* op = inst->operands;
+				printf("t%u = ", op->ID);
+				printf("%s ", IR2S[inst->code]);
+				if (op->type)
+					printf("%s ", op->type->name);
+				printf("t%u, ", op->left);
+				printf("t%u\n", op->right);
+				break;
+			}
 
-		printf("%s ", IR2S[inst->inst]);
-		for (int i = 0; i < lenmap[inst->inst]; i++) {
-			Operand* op = &inst->operands[i];
-			if (op->type == OP_RESOURCE)
-				printf("t%d ", op->resource);
-			else
-				printf("%d ", op->imm);
+			case IR_CONST: {
+				IRConstant* cts = inst->operands;
+				printf("t%u = ", cts->ID);
+				printf("%s ", IR2S[inst->code]);
+				if (cts->type)
+					printf("%s ", cts->type->name);
+
+				printf("%ld\n", cts->target);
+				break;
+			}
+
+			default: {
+				printf("PrintIR(): Printing IR is not implemented "
+					"for inst->code = %d\n", inst->code);
+				break;
+			}
 		}
-
-		printf("\n");
 	}
 }
 

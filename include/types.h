@@ -9,18 +9,18 @@ typedef struct Type {
 	const uint8_t align;
 } Type;
 
-extern const Type TYPE_I8;
-extern const Type TYPE_I16;
-extern const Type TYPE_I32;
-extern const Type TYPE_I64;
+extern Type TYPE_I8;
+extern Type TYPE_I16;
+extern Type TYPE_I32;
+extern Type TYPE_I64;
 
-extern const Type TYPE_U8;
-extern const Type TYPE_U16;
-extern const Type TYPE_U32;
-extern const Type TYPE_U64;
+extern Type TYPE_U8;
+extern Type TYPE_U16;
+extern Type TYPE_U32;
+extern Type TYPE_U64;
 
 // Array of all known built-in types
-extern const Type* BUILTIN_TYPES[];
+extern Type* BUILTIN_TYPES[];
 extern const int len_builtins;
 
 #endif
