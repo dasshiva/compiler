@@ -50,7 +50,9 @@ typedef struct ResourceMetadata {
 	int id;
 } RMD;
 
-static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
+static uint64_t GenIRExprRecurse(Vector* IR, Expr* expr, 
+		Vector* symtab, int level) {
+
 	switch (expr->type) {
 		case ET_INT_LITERAL: {
 			IRInst* ret = MakeIRInst(IR_NEW, 0);
@@ -64,13 +66,16 @@ static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 			OpImm(store, 2, expr->literal);
 			Append(IR, store);
 
+			if (!level)
+				goto clean_exit;
+
 			return ret->id;
 		}
 
 		case ET_BINARY_OP: {
 			BinaryOp* binop = expr->binop;
-			int left = GenIRExpr(IR, binop->left, symtab);
-			int right = GenIRExpr(IR, binop->right, symtab);
+			int left = GenIRExprRecurse(IR, binop->left, symtab, level + 1);
+			int right = GenIRExprRecurse(IR, binop->right, symtab, level + 1);
 
 			enum IRInstruction inst = BOT2IR(expr->binop->type);
 			IRInst* ret = MakeIRInst(inst, 0);
@@ -79,6 +84,10 @@ static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 				OpResource(ret, 1, right);
 				ret->id = GetCounter(&counter);
 				Append(IR, ret);
+
+				if (!level)
+					goto clean_exit;
+
 				return ret->id;
 			} else {
 				OpResource(ret, 0, left);
@@ -103,6 +112,10 @@ static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 				OpImm(ret, 1, type->size);
 				OpResource(ret, 2, right);
 				Append(IR, ret);
+
+				if (!level)
+					goto clean_exit;
+
 				return left;
 			}
 
@@ -111,11 +124,19 @@ static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
 
 		case ET_IDENT: {
 			RMD* rmd = GetVariable(symtab, expr->ident)->data;
+			if (!level)
+				goto clean_exit;
+
 			return rmd->id;
 		}
 	}
 
-	return 0; 
+clean_exit:
+	return 1;
+}
+
+static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
+	return GenIRExprRecurse(IR, expr, symtab, 0);
 }
 
 static int GenIRVarDecl(Vector* IR, VarDecl* vardecl, 
@@ -133,7 +154,8 @@ static int GenIRVarDecl(Vector* IR, VarDecl* vardecl,
 	var->data = rmd;
 
 	if (vardecl->init) 
-		GenIRExpr(IR, vardecl->init, symtab);
+		if (!GenIRExpr(IR, vardecl->init, symtab))
+			return 0;
 	
 	return 1; 
 }
@@ -149,8 +171,8 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 		Statement* st = Get(stats, idx);
 		switch (st->type) {
 			case ST_EXPR: {
-				//if (GenIRExpr(IR, st->expr, symtab))
-				//	return NULL;
+				if (!GenIRExpr(IR, st->expr, symtab))
+					return NULL;
 				GenIRExpr(IR, st->expr, symtab);
 				break;
 			}
