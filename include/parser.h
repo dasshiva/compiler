@@ -14,6 +14,10 @@ enum BinaryOpType {
 	BOT_MAX
 };
 
+enum UnaryOpType {
+	UOT_ADD, UOT_MINUS, UOT_MAX
+};
+
 struct Expr;
 typedef struct BinaryOp {
 	enum BinaryOpType type;
@@ -22,9 +26,16 @@ typedef struct BinaryOp {
 	Location loc; 
 } BinaryOp;
 
+typedef struct UnaryOp {
+	enum UnaryOpType type;
+	struct Expr* operand;
+	Location loc;
+} UnaryOp;
+
 enum ExprType {
 	ET_INT_LITERAL,
 	ET_IDENT,
+	ET_UNARY_OP,
 	ET_BINARY_OP
 };
 
@@ -33,6 +44,7 @@ typedef struct Expr {
 	union {
 		int literal;
 		char* ident;
+		UnaryOp* unop;
 		BinaryOp* binop;
 	};
 	Location loc;

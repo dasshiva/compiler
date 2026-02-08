@@ -62,6 +62,18 @@ uint32_t IRMod(Vector* IR, uint32_t left, uint32_t right, IRType* type) {
 	return IRInitBinaryOp(IR, IR_MODULUS, left, right, type);
 }
 
+uint32_t IRNeg(Vector* IR, uint32_t operand, IRType* type) {
+	IRInst* inst = MakeIRInst(IR_NEG);
+	IRNegate* op = malloc(sizeof(IRNegate));
+	op->ID = GetCounter(&counter);
+	op->type = type;
+	op->target = operand;
+
+	inst->operands = op;
+	Append(IR, inst);
+	return op->ID;
+}
+
 uint32_t NewCounter() {
 	return GetCounter(&counter);
 }

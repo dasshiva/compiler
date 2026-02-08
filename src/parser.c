@@ -38,6 +38,10 @@ int Expect(Lexer* lexer, TokenType type, const char* msg) {
 	return 0;
 }
 
+static int IsPrefixOperator(TokenType type) {
+	return (type == TT_PLUS) || (type == TT_MINUS);
+}
+
 static int IsOperator(TokenType type) {
 	switch (type) {
 		case TT_PLUS: case TT_MINUS: case TT_ASTERISK: 
@@ -46,20 +50,31 @@ static int IsOperator(TokenType type) {
 	}
 }
 
-static uint8_t infix_binding_power[] = {
-	(9 << 4) | 10, // + , -
-	(11 << 4) | 12, // * , /
-	(2 << 4) | 1, // =
+static uint16_t infix_binding_power[] = {
+	(2 << 8) | 1, // =
+	(11 << 8) | 12, // + , -
+	(13 << 8) | 14, // * , /, %
 };
+
+static uint16_t prefix_binding_power[] = {
+	(0 << 8) | 17 // +, -
+};
+
+static int OpToPrefixIndex(TokenType type) {
+	switch (type) {
+		case TT_PLUS: case TT_MINUS: return 0;
+		default: return -1;
+	}
+}
 
 static int OpToInfixIndex(TokenType type) {
 	switch (type) {
+		case TT_EQUALS: return 0;
 		case TT_PLUS: 
-		case TT_MINUS: return 0;
+		case TT_MINUS: return 1;
 		case TT_PERCENT:
 		case TT_ASTERISK: 
-		case TT_SLASH: return 1;
-		case TT_EQUALS: return 2;
+		case TT_SLASH: return 2;
 		default: return -1;
 	}
 }
@@ -67,6 +82,14 @@ static int OpToInfixIndex(TokenType type) {
 static const char* BOT_TO_STRING[] = {
 	"+", "-", "*", "/", "=", "%"
 };
+
+static enum UnaryOpType OpToUnop(TokenType type) {
+	switch (type) {
+		case TT_PLUS: return UOT_ADD;
+		case TT_MINUS: return UOT_MINUS;
+		default: return UOT_MAX; // unreachable
+	}
+}
 
 static enum BinaryOpType OpToBinop(TokenType type) {
 	switch (type) {
@@ -78,7 +101,7 @@ static enum BinaryOpType OpToBinop(TokenType type) {
 		case TT_EQUALS: return BOT_EQUALS;
 	}
 
-	return BOT_ADD; // unreachable
+	return BOT_MAX; // unreachable
 }
 
 static Expr* makeExpr(enum ExprType type) {
@@ -207,7 +230,22 @@ static Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 				break;
 			}
 			default: {
-				ParserError(lexer, tlhs, "Expected literal or identifier here");
+				if (IsPrefixOperator(tlhs->type)) {
+					int r_bp = prefix_binding_power[OpToPrefixIndex(tlhs->type)];
+					Expr* operand = PrattParseExpr(lexer, expr, r_bp);
+					if (!operand)
+						return NULL;
+
+					lhs = makeExpr(ET_UNARY_OP);
+					lhs->unop = malloc(sizeof(UnaryOp));
+					lhs->unop->type = OpToUnop(tlhs->type);
+					lhs->unop->operand = operand;
+					lhs->unop->loc.line = tlhs->line;
+					lhs->unop->loc.pos = tlhs->pos;
+					break;
+				}
+
+				ParserError(lexer, tlhs, "Expected literal/identifier/'+'/'-' here");
 				return NULL;
 			}
 		}
@@ -229,8 +267,8 @@ static Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 			break;
 		}
 
-		uint8_t bp = infix_binding_power[OpToInfixIndex(op->type)];
-		uint8_t l_bp = bp >> 4, r_bp = bp & 0xf;
+		uint16_t bp = infix_binding_power[OpToInfixIndex(op->type)];
+		uint16_t l_bp = bp >> 8, r_bp = bp & 0xff;
 		
 		if (l_bp < minbp)
 			break;
@@ -384,12 +422,18 @@ void DumpStatement(Statement* stat) {
 	}
 }
 
+static const char* UOT_TO_STRING[] = { "u+", "u-" };
+
 void DumpExpr(Expr* expr) {
 	if (expr->type == ET_INT_LITERAL)
 		printf("%d ", expr->literal);
 	else if (expr->type == ET_IDENT)
 		printf("%s ", expr->ident);
-	else {
+	else if (expr->type == ET_UNARY_OP) {
+		DumpExpr(expr->unop->operand);
+		printf("%s ", UOT_TO_STRING[expr->unop->type]);
+	}
+	else if (expr->type == ET_BINARY_OP) {
 		DumpExpr(expr->binop->left);
 		DumpExpr(expr->binop->right);
 		printf("%s ", BOT_TO_STRING[expr->binop->type]); 

@@ -22,6 +22,23 @@ static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr,
 			return ret;
 		}
 
+		case ET_UNARY_OP: {
+			UnaryOp* unop = expr->unop;
+			uint32_t operand = GenIRExprRecurse(IR, unop->operand,
+					symtab, level + 1);
+
+			uint32_t ret = operand;
+
+			switch (unop->type) {
+				case UOT_ADD: break; // A unary add is effectively a nop
+				case UOT_MINUS: {
+					ret = IRNeg(IR, operand, NULL); break;
+				}
+			}
+
+			return ret;
+		}
+
 		case ET_BINARY_OP: {
 			BinaryOp* binop = expr->binop;
 			uint32_t left = GenIRExprRecurse(IR, binop->left, 
@@ -30,7 +47,7 @@ static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr,
 					symtab, level + 1);
 
 			uint32_t ret = 0;
-			switch (expr->binop->type) {
+			switch (binop->type) {
 				case BOT_ADD: ret = IRAdd(IR, left, right, NULL); break;
 				case BOT_SUB: ret = IRSub(IR, left, right, NULL); break;
 				case BOT_MUL: ret = IRMul(IR, left, right, NULL); break;
@@ -77,7 +94,7 @@ static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr,
 
 		default: {
 			printf("IRGenExprRecurse(): expr->type %d does not "
-				"have IRGen implemented for it", expr->type);
+				"have IRGen implemented for it\n", expr->type);
 			return 0;
 		}
 	}
@@ -142,7 +159,7 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 
 const char* IR2S[] = {
 	"new", "store", "load", "add",
-	"sub", "mul", "div", "mod", "constant"
+	"sub", "mul", "div", "mod", "constant", "neg"
 };
 
 const int lenmap[] = {
@@ -176,6 +193,17 @@ void PrintIR(Vector* IR) {
 					printf("%s ", cts->type->name);
 
 				printf("%ld\n", cts->target);
+				break;
+			}
+
+			case IR_NEG: {
+				IRNegate* neg = inst->operands;
+				printf("t%u = ", neg->ID);
+				printf("%s ", IR2S[inst->code]);
+				if (neg->type)
+					printf("%s ", neg->type->name);
+
+				printf("t%ld\n", neg->target);
 				break;
 			}
 

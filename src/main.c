@@ -1,8 +1,8 @@
 #include "irgen.h"
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-
 
 int main(int argc, const char** argv) {
 	if (argc < 2) 
@@ -35,9 +35,15 @@ int main(int argc, const char** argv) {
 	if (!VectorLength(stats))
 		return 0;
 
+	if (getenv("LANG_PARSE_ONLY"))
+		return 0;
+
 	Vector* symtab = SemanticAnalyse(&lexer, stats);
 	if (!symtab)
 		return 2;
+
+	if (getenv("LANG_SEMA_ONLY"))
+		return 0;
 
 	Vector* ir = GenIR(stats, symtab);
 	if (!ir) {

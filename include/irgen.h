@@ -6,7 +6,7 @@
 
 enum IRInstruction {
 	IR_NEW, IR_STORE, IR_LOAD, IR_ADD, IR_SUB,
-	IR_MUL, IR_DIV, IR_MODULUS, IR_CONST, IR_COPY,
+	IR_MUL, IR_DIV, IR_MODULUS, IR_CONST, IR_NEG,
 	IR_MAX
 };
 
@@ -27,7 +27,7 @@ typedef Type IRType;
 
 typedef struct IRInst {
 	enum  IRInstruction code;
-	Instruction* operands;
+	Instruction operands;
 } IRInst;
 
 // t%ID = {binary-op} [type] <left>, <right>
@@ -55,6 +55,13 @@ typedef struct IRConstant {
 	int64_t  target;
 	uint32_t ID;
 } IRConstant; 
+
+// tID = neg [type] <target>
+typedef struct IRNegate {
+	IRType* type;
+	uint32_t target;
+	uint32_t ID;
+} IRNegate;
 
 // store <dest>, <source>
 typedef struct IRStoreMemory {

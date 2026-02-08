@@ -170,7 +170,22 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 			return 1;
 		}
 
-		default: {
+		case ET_UNARY_OP: {
+			int l = SemaExprEvaluate(opstack, expr->unop->operand, symtab, err);
+			if (!l) 
+				return 0;
+
+			int* lhs = Pop(opstack);
+			if (lhs == INVALID_INDEX) {
+				printf("SemaExprEvaluate(): lhs == NULL\n");
+				return 0;
+			}
+
+			Append(opstack, lhs);
+			return 1;
+		}
+
+		case ET_BINARY_OP: {
 			int l = SemaExprEvaluate(opstack, expr->binop->left, symtab, err);
 			int r = SemaExprEvaluate(opstack, expr->binop->right, symtab, err);
 			if (!l || !r)
@@ -190,6 +205,12 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 
 			Append(opstack, lhs);
 			return 1;
+		}
+
+		default: {
+			printf("Sema has not been implemented for expr->type = %d\n",
+					expr->type);
+			return 0;
 		}
 	}
 }
