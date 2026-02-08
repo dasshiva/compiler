@@ -5,22 +5,6 @@
 #include <stdio.h>
 #include <limits.h>
 
-static enum IRInstruction BOT2IR(enum BinaryOpType ty) {
-	switch(ty) {
-		case BOT_ADD: return IR_ADD;
-		case BOT_SUB: return IR_SUB;
-		case BOT_MUL: return IR_MUL;
-		case BOT_DIV: return IR_DIV;
-		case BOT_EQUALS: return IR_STORE;
-		case BOT_MOD: return IR_MODULUS;
-		default: {
-			printf("BOT2IR(): Unknown value of ty = %d\n", ty);
-			return IR_MAX;
-		}
-
-	}
-}
-
 typedef struct ResourceMetadata {
 	Type* type;
 	int id;
