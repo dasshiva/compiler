@@ -333,8 +333,15 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 	}
 
 	Expr* expr = (op->type == TT_SEMICOLON) ? NULL : makeExpr(ET_IDENT);
-	if (!expr)
+	if (!expr) {
+		if (!ty) {
+			ParserError(lexer, token, "Variables without an initializer "
+				"must have a type provided to them");
+			return 1;
+		}
+
 		goto no_init;
+	}
 
 	if (!ParseIdent(lexer, token, expr))
 		return 1;

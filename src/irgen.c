@@ -162,10 +162,6 @@ const char* IR2S[] = {
 	"sub", "mul", "div", "mod", "constant", "neg"
 };
 
-const int lenmap[] = {
-	1, 3, 0, 2, 2, 2, 2, 2
-};
-
 void PrintIR(Vector* IR) {
 	for (uint32_t idx = 0; idx < VectorLength(IR); idx++) {
 		IRInst* inst = Get(IR, idx);

@@ -2,12 +2,16 @@
 #include "vector.h"
 
 Vector* NewVector() {
+	return VectorOfLength(0);
+}
+
+Vector* VectorOfLength(uint32_t size) {
 	Vector* vec = malloc(sizeof(Vector));
 	if (!vec)
 		return NULL;
 
-	vec->size = 0;
-	vec->capacity = vec->size +  100;
+	vec->size = size;
+	vec->capacity = vec->size + 100;
 	vec->data = malloc(sizeof(void*) * vec->capacity);
 
 	if (!vec->data) {

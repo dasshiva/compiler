@@ -10,6 +10,7 @@ typedef struct Vector {
 } Vector;
 
 Vector*  NewVector();
+Vector*  VectorOfLength(uint32_t size);
 uint32_t VectorLength(Vector* vec);
 void     Append(Vector* vec, const void* data);
 void*    Get(Vector* vec, uint32_t index);
