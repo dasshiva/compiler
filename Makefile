@@ -12,7 +12,9 @@ all: $(OBJ_FILES)
 $(OBJ_FILES): | $(OBJDIR)
 $(OBJDIR): 
 	mkdir -p objdir
+	mkdir -p objdir/parser
 
 clean:
 	rm -f objdir/*.o
+	rm -f objdir/parser/*.o
 	rm -f lang
