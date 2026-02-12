@@ -2,6 +2,7 @@
 #define __PARSER_H__
 
 #include "lexer.h"
+#include "types.h"
 
 typedef struct Location {
 	uint32_t line;
@@ -39,10 +40,15 @@ enum ExprType {
 	ET_BINARY_OP
 };
 
+typedef struct IntLiteral {
+	Type* type;
+	int64_t  number;
+} IntLiteral;
+
 typedef struct Expr {
 	enum ExprType type;
 	union {
-		int literal;
+		IntLiteral* literal;
 		char* ident;
 		UnaryOp* unop;
 		BinaryOp* binop;

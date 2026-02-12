@@ -15,7 +15,7 @@ static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr,
 
 	switch (expr->type) {
 		case ET_INT_LITERAL: {
-			uint32_t ret = IRConst(IR, &TYPE_I32, expr->literal);
+			uint32_t ret = IRConst(IR, expr->literal->type, expr->literal->number);
 			if (!level)
 				goto clean_exit;
 

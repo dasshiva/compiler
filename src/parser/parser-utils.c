@@ -70,7 +70,7 @@ static const char* BOT_TO_STRING[] = {
 
 void DumpExpr(Expr* expr) {
 	if (expr->type == ET_INT_LITERAL)
-		printf("%d ", expr->literal);
+		printf("%d ", expr->literal->number);
 	else if (expr->type == ET_IDENT)
 		printf("%s ", expr->ident);
 	else if (expr->type == ET_UNARY_OP) {

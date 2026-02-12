@@ -145,7 +145,7 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 		Vector* symtab, Error* err) {
 	switch (expr->type) {
 		case ET_INT_LITERAL: {
-			Append(opstack, &TAG_I32);
+			Append(opstack, ConvertTypeToTag(expr->literal->type));
 			return 1;
 		}
 

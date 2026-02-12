@@ -1,11 +1,20 @@
 /* Reference: https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include "parser-utils.h"
 #include "parse-expr.h"
+
+Type* ParseLiteralSuffix(char* source, uint32_t len) {
+	for (int i = 0; i < len_builtins; i++) {
+		Type* ty = BUILTIN_TYPES[i];
+		if (strncmp(source, ty->name, len) == 0)
+			return ty;
+	}
+
+	return NULL;
+}
 
 int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr) {
 	char* source = lexer->source + token->offset;
@@ -39,19 +48,31 @@ int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr) {
 		source++;
 	}
 
-	int literal = 0;
+	int64_t literal = 0;
+	Type* type = NULL;
+
 	for (uint32_t idx = 0; idx < token->length; idx++) {
 		int d = ToDecimal(*source - '0', base);
 		if (d == -1) {
+			uint32_t diff = token->length - idx;
+			if (diff > 1 && diff < 4) {
+				type = ParseLiteralSuffix(source, diff);
+				if (type) 
+					break;
+			}
+
 			ParserError(lexer, token, "Non-digit present in number literal");
-			return 1;
+			return 0;
 		}
 
 		literal = literal * base + d;
 		source++;
 	}
 
-	expr->literal = literal;
+	expr->literal = malloc(sizeof(IntLiteral));
+	expr->literal->type = (type) ? type : &TYPE_I32;
+	expr->literal->number = literal;
+
 	return 1;
 }
 
