@@ -7,15 +7,17 @@
 
 typedef struct ResourceMetadata {
 	Type* type;
-	int id;
+	IRInst* id;
 } RMD;
 
-static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr, 
+#define IRGEN_EVALUATE_SUCCESS ((void*)1)
+
+static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr, 
 		Vector* symtab, int level) {
 
 	switch (expr->type) {
 		case ET_INT_LITERAL: {
-			uint32_t ret = IRConst(IR, expr->literal->type, expr->literal->number);
+			IRInst* ret = IRConst(IR, expr->literal->type, expr->literal->number);
 			if (!level)
 				goto clean_exit;
 
@@ -24,10 +26,10 @@ static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr,
 
 		case ET_UNARY_OP: {
 			UnaryOp* unop = expr->unop;
-			uint32_t operand = GenIRExprRecurse(IR, unop->operand,
+			IRInst* operand = GenIRExprRecurse(IR, unop->operand,
 					symtab, level + 1);
 
-			uint32_t ret = operand;
+			IRInst* ret = operand;
 
 			switch (unop->type) {
 				case UOT_ADD: break; // A unary add is effectively a nop
@@ -36,17 +38,20 @@ static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr,
 				}
 			}
 
+			if (!level)
+				goto clean_exit;
+
 			return ret;
 		}
 
 		case ET_BINARY_OP: {
 			BinaryOp* binop = expr->binop;
-			uint32_t left = GenIRExprRecurse(IR, binop->left, 
+			IRInst* left = GenIRExprRecurse(IR, binop->left, 
 					symtab, level + 1);
-			uint32_t right = GenIRExprRecurse(IR, binop->right, 
+			IRInst* right = GenIRExprRecurse(IR, binop->right, 
 					symtab, level + 1);
 
-			uint32_t ret = 0;
+			IRInst* ret = NULL;
 			switch (binop->type) {
 				case BOT_ADD: ret = IRAdd(IR, left, right, NULL); break;
 				case BOT_SUB: ret = IRSub(IR, left, right, NULL); break;
@@ -100,11 +105,12 @@ static uint32_t GenIRExprRecurse(Vector* IR, Expr* expr,
 	}
 
 clean_exit:
-	return 1;
+	return IRGEN_EVALUATE_SUCCESS;
 }
 
 static int GenIRExpr(Vector* IR, Expr* expr, Vector* symtab) {
-	return GenIRExprRecurse(IR, expr, symtab, 0);
+	return GenIRExprRecurse(IR, expr, symtab, 0) == 
+		IRGEN_EVALUATE_SUCCESS;
 }
 
 static int GenIRVarDecl(Vector* IR, VarDecl* vardecl, 
@@ -112,7 +118,7 @@ static int GenIRVarDecl(Vector* IR, VarDecl* vardecl,
 
 	RMD* rmd = malloc(sizeof(RMD));
 	rmd->type = GetType(symtab, vardecl->type);
-	rmd->id = UINT32_MAX;
+	rmd->id = NULL;
 
 	Symbol* var = GetVariable(symtab, vardecl->ident);
 	var->data = rmd;
@@ -163,7 +169,7 @@ const char* IR2S[] = {
 };
 
 void PrintIR(Vector* IR) {
-	for (uint32_t idx = 0; idx < VectorLength(IR); idx++) {
+	/* for (uint32_t idx = 0; idx < VectorLength(IR); idx++) {
 		IRInst* inst = Get(IR, idx);
 		switch (inst->code) {
 			case IR_ADD: 
@@ -209,6 +215,6 @@ void PrintIR(Vector* IR) {
 				break;
 			}
 		}
-	}
+	} */
 }
 

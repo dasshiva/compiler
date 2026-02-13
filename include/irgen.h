@@ -30,12 +30,11 @@ typedef struct IRInst {
 	Instruction operands;
 } IRInst;
 
-// t%ID = {binary-op} [type] <left>, <right>
+// {binary-op} [type] <left>, <right>
 typedef struct IRBinaryOp {
 	IRType*  type;
-	uint32_t left;
-	uint32_t right;
-	uint32_t ID;
+	IRInst*  left;
+	IRInst*  right;
 } IRBinaryOp; 
 
 // t%ID = copy <target>
@@ -53,14 +52,12 @@ typedef struct IRAllocate {
 typedef struct IRConstant {
 	IRType*  type;
 	int64_t  target;
-	uint32_t ID;
 } IRConstant; 
 
 // tID = neg [type] <target>
 typedef struct IRNegate {
 	IRType* type;
-	uint32_t target;
-	uint32_t ID;
+	IRInst* target;
 } IRNegate;
 
 // store <dest>, <source>
