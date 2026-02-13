@@ -20,9 +20,12 @@ int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr) {
 	char* source = lexer->source + token->offset;
 	int base = 10;
 
+	expr->literal = malloc(sizeof(IntLiteral));
+	
 	if (*source == '0') { 
 		if (token->length == 1) {
-			expr->literal = 0;
+			expr->literal->type = &TYPE_I32;
+			expr->literal->number = 0;
 			return 1;
 		}
 
@@ -69,10 +72,8 @@ int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr) {
 		source++;
 	}
 
-	expr->literal = malloc(sizeof(IntLiteral));
 	expr->literal->type = (type) ? type : &TYPE_I32;
 	expr->literal->number = literal;
-
 	return 1;
 }
 

@@ -46,12 +46,28 @@ Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 
 				break;
 			}
+
 			case TT_IDENT: {
 				lhs = makeExpr(ET_IDENT);
 				if (!ParseIdent(lexer, tlhs, lhs))
 					return NULL;
+
 				break;
 			}
+
+			case TT_LPAREN: {
+				Expr* paren_expr = PrattParseExpr(lexer, expr, 0);
+				if (!paren_expr) 
+					return NULL;
+
+				if (!Expect(lexer, TT_RPAREN, "Expected ')' to end "
+							"parenthesized expression"))
+					return NULL;
+
+				lhs = paren_expr;
+				break;
+			}
+
 			default: {
 				if (IsPrefixOperator(tlhs->type)) {
 					int r_bp = prefix_binding_power[OpToPrefixIndex(tlhs->type)];
@@ -68,7 +84,8 @@ Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 					break;
 				}
 
-				ParserError(lexer, tlhs, "Expected literal/identifier/'+'/'-' here");
+				ParserError(lexer, tlhs, "Expected literal/identifier/" 
+						"'+'/'-' or '(' here");
 				return NULL;
 			}
 		}

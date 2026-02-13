@@ -256,6 +256,8 @@ Token* Next(Lexer* lexer) {
 		case ';' : return makeToken(lexer, TT_SEMICOLON, 1);
 		case '=' : return makeToken(lexer, TT_EQUALS, 1);
 		case ':' : return makeToken(lexer, TT_COLON, 1);
+		case '(' : return makeToken(lexer, TT_LPAREN, 1);
+		case ')' : return makeToken(lexer, TT_RPAREN, 1);
 		case '%' : return makeToken(lexer, TT_PERCENT, 1);
 		default: {
 			if (isdigit(c))
@@ -280,7 +282,7 @@ Token* Peek(Lexer* lexer) {
 
 static const char* T2S[] = {
 	"EOF", "Number", "+", "-", "*", "/", ";", 
-	"let", "Identifier", "=", ":", "%"
+	"let", "Identifier", "=", ":", "%", "(", ")"
 };
 
 void DumpToken(Lexer* lexer, Token* token) {
