@@ -13,7 +13,7 @@ static IRInst* MakeIRInst(enum IRInstruction inst) {
 IRInst* IRConst(Vector* IR, IRType* type, int64_t n) {
 	IRInst* ret = MakeIRInst(IR_CONST);
 	IRConstant* ct = malloc(sizeof(IRConstant));
-	ct->type = type;
+	ret->type = type;
 	ct->target = n;
 
 	ret->operands = ct;
@@ -27,7 +27,7 @@ static IRInst* IRInitBinaryOp(Vector* IR, enum IRInstruction inst,
 
 	IRInst* ret = MakeIRInst(inst);
 	IRBinaryOp* op = malloc(sizeof(IRBinaryOp));
-	op->type = type;
+	ret->type = type;
 	op->left = left;
 	op->right = right;
 
@@ -61,11 +61,33 @@ IRInst* IRMod(Vector* IR, IRInst* left, IRInst* right, IRType* type) {
 IRInst* IRNeg(Vector* IR, IRInst* operand, IRType* type) {
 	IRInst* inst = MakeIRInst(IR_NEG);
 	IRNegate* op = malloc(sizeof(IRNegate));
-	op->type = type;
+	inst->type = type;
 	op->target = operand;
 
 	inst->operands = op;
 	Append(IR, inst);
 	return inst;
+}
+
+uint32_t* GetIDField(IRInst* inst) {
+	switch (inst->code) {
+		case IR_ADD: case IR_SUB: case IR_MUL: case IR_DIV:
+		case IR_MODULUS: {
+			IRBinaryOp* op = inst->operands;
+			return &op->ID;
+		}
+
+		case IR_CONST: {
+			IRConstant* cts = inst->operands;
+			return &cts->ID;
+		}
+
+		case IR_NEG: {
+			IRNegate* op = inst->operands;
+			return &op->ID;
+		}
+
+		default: return NULL;
+	}
 }
 

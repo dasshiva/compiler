@@ -14,8 +14,8 @@
 
 #include "lexer.h"
 
-static void die(const char* msg) {
-	printf("%s\n");
+static _Noreturn void die(const char* msg) {
+	printf("%s\n", msg);
 	exit(1);
 }
 

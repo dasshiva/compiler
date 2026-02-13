@@ -27,14 +27,15 @@ typedef Type IRType;
 
 typedef struct IRInst {
 	enum  IRInstruction code;
+	IRType* type;
 	Instruction operands;
 } IRInst;
 
 // {binary-op} [type] <left>, <right>
 typedef struct IRBinaryOp {
-	IRType*  type;
 	IRInst*  left;
 	IRInst*  right;
+	uint32_t ID;
 } IRBinaryOp; 
 
 // t%ID = copy <target>
@@ -50,14 +51,14 @@ typedef struct IRAllocate {
 
 // tID = const [type] <target>
 typedef struct IRConstant {
-	IRType*  type;
 	int64_t  target;
+	uint32_t ID;
 } IRConstant; 
 
 // tID = neg [type] <target>
 typedef struct IRNegate {
-	IRType* type;
 	IRInst* target;
+	uint32_t ID;
 } IRNegate;
 
 // store <dest>, <source>

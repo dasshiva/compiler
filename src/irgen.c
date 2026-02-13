@@ -169,7 +169,17 @@ const char* IR2S[] = {
 };
 
 void PrintIR(Vector* IR) {
-	/* for (uint32_t idx = 0; idx < VectorLength(IR); idx++) {
+	uint32_t ctr = 1;
+	for (uint32_t idx = 0; idx < VectorLength(IR); idx++) {
+		IRInst* inst = Get(IR, idx);
+		uint32_t* id = GetIDField(inst);
+		if (!id)
+			continue;
+
+		*id = ctr++;
+	}
+
+	for (uint32_t idx = 0; idx < VectorLength(IR); idx++) {
 		IRInst* inst = Get(IR, idx);
 		switch (inst->code) {
 			case IR_ADD: 
@@ -180,10 +190,11 @@ void PrintIR(Vector* IR) {
 				IRBinaryOp* op = inst->operands;
 				printf("t%u = ", op->ID);
 				printf("%s ", IR2S[inst->code]);
-				if (op->type)
-					printf("%s ", op->type->name);
-				printf("t%u, ", op->left);
-				printf("t%u\n", op->right);
+				if (inst->type)
+					printf("%s ", inst->type->name);
+
+				printf("t%u, ", *GetIDField(op->left));
+				printf("t%u\n", *GetIDField(op->right));
 				break;
 			}
 
@@ -191,8 +202,8 @@ void PrintIR(Vector* IR) {
 				IRConstant* cts = inst->operands;
 				printf("t%u = ", cts->ID);
 				printf("%s ", IR2S[inst->code]);
-				if (cts->type)
-					printf("%s ", cts->type->name);
+				if (inst->type)
+					printf("%s ", inst->type->name);
 
 				printf("%ld\n", cts->target);
 				break;
@@ -202,10 +213,10 @@ void PrintIR(Vector* IR) {
 				IRNegate* neg = inst->operands;
 				printf("t%u = ", neg->ID);
 				printf("%s ", IR2S[inst->code]);
-				if (neg->type)
-					printf("%s ", neg->type->name);
+				if (inst->type)
+					printf("%s ", inst->type->name);
 
-				printf("t%ld\n", neg->target);
+				printf("t%u\n", GetIDField(neg->target));
 				break;
 			}
 
@@ -215,6 +226,6 @@ void PrintIR(Vector* IR) {
 				break;
 			}
 		}
-	} */
+	}
 }
 
