@@ -232,6 +232,26 @@ static Token* ReadNumber(Lexer* lexer) {
 	return token;
 }
 
+void SkipLine(Lexer* lexer) {
+	while (!IsEOF(lexer)) {
+		if (lexer->source[lexer->offset] == '\n')
+			break;
+
+		// We don't need to accurately track tabs and positions in the comment
+		// because, errors cannot originate from here. 
+		// The compiler will always ignore everything followed by // 
+		lexer->offset++;
+		lexer->pos++;
+	}
+}
+
+static int LexerPeek(Lexer* lexer) {
+	if (lexer->offset + 1 >= lexer->size)
+		return 0;
+
+	return lexer->source[lexer->offset + 1];
+}
+
 Token* Next(Lexer* lexer) {
 	if (lexer->peek) {
 		Token* ret = lexer->peek;
@@ -252,7 +272,14 @@ Token* Next(Lexer* lexer) {
 		case '+' : return makeToken(lexer, TT_PLUS, 1);
 		case '-' : return makeToken(lexer, TT_MINUS, 1);
 		case '*' : return makeToken(lexer, TT_ASTERISK, 1);
-		case '/' : return makeToken(lexer, TT_SLASH, 1);
+		case '/' : {
+			int next = LexerPeek(lexer);
+			switch (next) {
+				case '/': SkipLine(lexer); return Next(lexer);
+				default: return makeToken(lexer, TT_SLASH, 1);
+			}
+		}
+
 		case ';' : return makeToken(lexer, TT_SEMICOLON, 1);
 		case '=' : return makeToken(lexer, TT_EQUALS, 1);
 		case ':' : return makeToken(lexer, TT_COLON, 1);
