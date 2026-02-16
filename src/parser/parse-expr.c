@@ -35,6 +35,46 @@ static int OpToInfixIndex(TokenType type) {
 }
 
 static Expr* ParseFunCall(Lexer* lexer, Expr* name) {
+	// Skip the beginning '('
+	Next(lexer);
+
+	Vector* args = NewVector();
+
+	while (1) {
+		Token* token = Peek(lexer);
+		if (token->type == TT_RPAREN) {
+			Next(lexer);
+			break;
+		}
+
+		Expr* expr = PrattParseExpr(lexer, NULL, 0);
+		if (!expr) {
+			ParserError(lexer, token, "Expected valid expression here");
+			return NULL;
+		}
+
+		Append(args, expr);
+		token = Peek(lexer);
+		if (token->type == TT_RPAREN) {
+			Next(lexer);
+			break;
+		}
+
+		else if (token->type == TT_COMMA) {
+			Next(lexer);
+			token = Peek(lexer);
+			if (token->type == TT_RPAREN) {
+				ParserError(lexer, token, 
+					"Parameters expected after ','");
+				return NULL;
+			}
+		}
+		else {
+			ParserError(lexer, token, "Expected ','/'')' here");
+			return NULL;
+		}
+	}
+
 	return name;
 }
 
