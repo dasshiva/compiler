@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "parser-utils.h"
 #include "parse-expr.h"
+#include <stdio.h>
 
 int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr);
 int ParseIdent(Lexer* lexer, Token* token, Expr* expr);
@@ -175,6 +176,9 @@ Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 		Expr* rhs = NULL;
 
 		if (op->type == TT_LPAREN) {
+			printf("Function calls are disabled at the moment\n");
+			exit(1);
+
 			rhs = ParseFunCall(lexer);
 			if (!rhs)
 				return NULL;
