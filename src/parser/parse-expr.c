@@ -52,6 +52,10 @@ static Expr* ParsePredicate(Lexer* lexer) {
 			if (!ParseIdent(lexer, tlhs, lhs))
 				return NULL;
 
+			Token* funcall = Peek(lexer);
+			if (funcall->type == TT_LPAREN) {
+				// TODO Implement function calls
+			}
 			break;
 		}
 
