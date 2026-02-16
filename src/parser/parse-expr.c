@@ -34,64 +34,78 @@ static int OpToInfixIndex(TokenType type) {
 	}
 }
 
-Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
+static Expr* ParsePredicate(Lexer* lexer) { 
+	Token* tlhs = Next(lexer);
 	Expr* lhs = NULL;
-	if (!expr) {
-		Token* tlhs = Next(lexer);
-		switch (tlhs->type) {
-			case TT_NUMBER: { 
-				lhs = makeExpr(ET_INT_LITERAL);
-				if (!ParseIntLiteral(lexer, tlhs, lhs))
-					return NULL;
+
+	switch (tlhs->type) {
+		case TT_NUMBER: { 
+			lhs = makeExpr(ET_INT_LITERAL);
+			if (!ParseIntLiteral(lexer, tlhs, lhs))
+				return NULL;
 
 				break;
-			}
+		}
 
-			case TT_IDENT: {
-				lhs = makeExpr(ET_IDENT);
-				if (!ParseIdent(lexer, tlhs, lhs))
-					return NULL;
+		case TT_IDENT: {
+			lhs = makeExpr(ET_IDENT);
+			if (!ParseIdent(lexer, tlhs, lhs))
+				return NULL;
 
-				break;
-			}
+			break;
+		}
 
-			case TT_LPAREN: {
-				Expr* paren_expr = PrattParseExpr(lexer, expr, 0);
-				if (!paren_expr) 
-					return NULL;
+		case TT_LPAREN: {
+			Expr* paren_expr = PrattParseExpr(lexer, NULL, 0);
+			if (!paren_expr) 
+				return NULL;
 
-				if (!Expect(lexer, TT_RPAREN, "Expected ')' to end "
+			if (!Expect(lexer, TT_RPAREN, "Expected ')' to end "
 							"parenthesized expression"))
 					return NULL;
 
-				lhs = paren_expr;
+			lhs = paren_expr;
+			break;
+		}
+
+			
+		default: {
+			if (IsPrefixOperator(tlhs->type)) {
+					
+				int r_bp = prefix_binding_power[OpToPrefixIndex(tlhs->type)];
+				Expr* operand = PrattParseExpr(lexer, NULL, r_bp);
+				if (!operand)
+						return NULL;
+
+				lhs = makeExpr(ET_UNARY_OP);
+				lhs->unop = malloc(sizeof(UnaryOp));
+				lhs->unop->type = OpToUnop(tlhs->type);
+				lhs->unop->operand = operand;
+				lhs->unop->loc.line = tlhs->line;
+				lhs->unop->loc.pos = tlhs->pos;
 				break;
 			}
 
-			default: {
-				if (IsPrefixOperator(tlhs->type)) {
-					int r_bp = prefix_binding_power[OpToPrefixIndex(tlhs->type)];
-					Expr* operand = PrattParseExpr(lexer, expr, r_bp);
-					if (!operand)
-						return NULL;
-
-					lhs = makeExpr(ET_UNARY_OP);
-					lhs->unop = malloc(sizeof(UnaryOp));
-					lhs->unop->type = OpToUnop(tlhs->type);
-					lhs->unop->operand = operand;
-					lhs->unop->loc.line = tlhs->line;
-					lhs->unop->loc.pos = tlhs->pos;
-					break;
-				}
-
-				ParserError(lexer, tlhs, "Expected literal/identifier/" 
+			ParserError(lexer, tlhs, "Expected literal/identifier/" 
 						"'+'/'-' or '(' here");
-				return NULL;
-			}
+			return NULL;
 		}
+	}
 
+	if (lhs) {
 		lhs->loc.line = tlhs->line;
 		lhs->loc.pos = tlhs->pos;
+	}
+
+	return lhs;
+}
+
+Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
+	Expr* lhs = NULL;
+	if (!expr) {
+		lhs = ParsePredicate(lexer);
+		if (!lhs) 
+			return NULL;
 
 	}  else { 
 		lhs = expr;
