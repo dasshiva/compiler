@@ -34,6 +34,10 @@ static int OpToInfixIndex(TokenType type) {
 	}
 }
 
+static Expr* ParseFunCall(Lexer* lexer, Expr* name) {
+	return name;
+}
+
 static Expr* ParsePredicate(Lexer* lexer) { 
 	Token* tlhs = Next(lexer);
 	Expr* lhs = NULL;
@@ -53,9 +57,9 @@ static Expr* ParsePredicate(Lexer* lexer) {
 				return NULL;
 
 			Token* funcall = Peek(lexer);
-			if (funcall->type == TT_LPAREN) {
-				// TODO Implement function calls
-			}
+			if (funcall->type == TT_LPAREN) 
+				lhs = ParseFunCall(lexer, lhs);
+			
 			break;
 		}
 
