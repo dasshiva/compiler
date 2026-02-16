@@ -12,7 +12,7 @@ typedef struct Location {
 enum BinaryOpType {
 	BOT_ADD, BOT_SUB,
 	BOT_MUL, BOT_DIV, BOT_EQUALS, BOT_MOD,
-	BOT_MAX
+	BOT_FNCALL, BOT_MAX
 };
 
 enum UnaryOpType {
@@ -37,7 +37,8 @@ enum ExprType {
 	ET_INT_LITERAL,
 	ET_IDENT,
 	ET_UNARY_OP,
-	ET_BINARY_OP
+	ET_BINARY_OP,
+	ET_TUPLE
 };
 
 typedef struct IntLiteral {
@@ -52,6 +53,7 @@ typedef struct Expr {
 		char* ident;
 		UnaryOp* unop;
 		BinaryOp* binop;
+		Vector* tuple;
 	};
 	Location loc;
 } Expr;

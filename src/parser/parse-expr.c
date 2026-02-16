@@ -9,6 +9,7 @@ static uint16_t infix_binding_power[] = {
 	(2 << 8) | 1, // =
 	(11 << 8) | 12, // + , -
 	(13 << 8) | 14, // * , /, %
+	(31 << 8) | 32, // function call ()
 };
 
 static uint16_t prefix_binding_power[] = {
@@ -30,14 +31,12 @@ static int OpToInfixIndex(TokenType type) {
 		case TT_PERCENT:
 		case TT_ASTERISK: 
 		case TT_SLASH: return 2;
+		case TT_LPAREN: return 3; // function call
 		default: return -1;
 	}
 }
 
-static Expr* ParseFunCall(Lexer* lexer, Expr* name) {
-	// Skip the beginning '('
-	Next(lexer);
-
+static Expr* ParseFunCall(Lexer* lexer) {
 	Vector* args = NewVector();
 
 	while (1) {
@@ -75,7 +74,10 @@ static Expr* ParseFunCall(Lexer* lexer, Expr* name) {
 		}
 	}
 
-	return name;
+	Expr* expr = makeExpr(ET_TUPLE);
+	expr->tuple = args;
+
+	return expr;
 }
 
 static Expr* ParsePredicate(Lexer* lexer) { 
@@ -96,10 +98,6 @@ static Expr* ParsePredicate(Lexer* lexer) {
 			if (!ParseIdent(lexer, tlhs, lhs))
 				return NULL;
 
-			Token* funcall = Peek(lexer);
-			if (funcall->type == TT_LPAREN) 
-				lhs = ParseFunCall(lexer, lhs);
-			
 			break;
 		}
 
@@ -164,10 +162,8 @@ Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 		if (op->type == TT_SEMICOLON || op->type == TT_EOF)
 			break;
 
-		if (!IsOperator(op->type)) {
-			// ParserError(lexer, op, "Expected operator here");
+		if (!IsOperator(op->type))
 			break;
-		}
 
 		uint16_t bp = infix_binding_power[OpToInfixIndex(op->type)];
 		uint16_t l_bp = bp >> 8, r_bp = bp & 0xff;
@@ -176,9 +172,18 @@ Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 			break;
 
 		Next(lexer);
-		Expr* rhs = PrattParseExpr(lexer, NULL, r_bp);
-		if (!rhs)
-			return NULL;
+		Expr* rhs = NULL;
+
+		if (op->type == TT_LPAREN) {
+			rhs = ParseFunCall(lexer);
+			if (!rhs)
+				return NULL;
+		}
+		else {
+			rhs = PrattParseExpr(lexer, NULL, r_bp);
+			if (!rhs)
+				return NULL;
+		}
 
 		Expr* tmp = makeExpr(ET_BINARY_OP);
 		tmp->loc.line = op->line;
