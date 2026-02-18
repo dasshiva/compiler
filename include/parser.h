@@ -38,13 +38,18 @@ enum ExprType {
 	ET_IDENT,
 	ET_UNARY_OP,
 	ET_BINARY_OP,
-	ET_TUPLE
+	ET_CAST
 };
 
 typedef struct IntLiteral {
 	Type* type;
 	int64_t  number;
 } IntLiteral;
+
+typedef struct Cast {
+	Type* target;
+	struct Expr* expr;
+} Cast;
 
 typedef struct Expr {
 	enum ExprType type;
@@ -53,7 +58,7 @@ typedef struct Expr {
 		char* ident;
 		UnaryOp* unop;
 		BinaryOp* binop;
-		Vector* tuple;
+		Cast* cast;
 	};
 	Location loc;
 } Expr;

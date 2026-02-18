@@ -11,5 +11,5 @@ IRInst* IRDiv(Vector* IR, IRInst* left, IRInst* right, IRType* type);
 IRInst* IRMod(Vector* IR, IRInst* left, IRInst* right, IRType* type); 
 IRInst* IRNeg(Vector* IR, IRInst* op, IRType* type);
 uint32_t* GetIDField(IRInst* inst);
-
+IRInst* IRCast(Vector* IR, IRInst* operand, IRType* type); 
 #endif

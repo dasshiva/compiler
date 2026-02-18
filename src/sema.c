@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 typedef struct Error {
 	Location* loc;
 	char message[400];
@@ -140,7 +139,6 @@ static const int* ConvertTypeToTag(const Type* type) {
 
 	return NULL;
 }
-
 static int SemaExprEvaluate(Vector* opstack, Expr* expr, 
 		Vector* symtab, Error* err) {
 	switch (expr->type) {
@@ -182,6 +180,21 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 			}
 
 			Append(opstack, lhs);
+			return 1;
+		}
+
+		case ET_CAST: {
+			int l = SemaExprEvaluate(opstack, expr->cast->expr, symtab, err);
+			if (!l)
+				return 0;
+
+			int *lhs = Pop(opstack);
+			if (lhs == INVALID_INDEX) {
+				printf("SemaExprEvaluate(): lhs == NULL\n");
+				return 0;
+			}
+
+			Append(opstack, ConvertTypeToTag(expr->cast->target));
 			return 1;
 		}
 
@@ -292,11 +305,14 @@ Vector* SemanticAnalyse(Lexer* lexer, Vector* statements) {
 		Append(symtab, sym);
 	}
 
+	int error = 0;
 	for (uint32_t i = 0; i < VectorLength(statements); i++) {
 		Error err;
-		if (!SemaStatement(Get(statements, i), symtab, &err))
+		if (!SemaStatement(Get(statements, i), symtab, &err)) {
 			SemaError(lexer, &err);
+			error = 1;
+		}
 	}
 
-	return symtab;
+	return (error) ? NULL : symtab;
 }

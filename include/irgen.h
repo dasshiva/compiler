@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 enum IRInstruction {
-	IR_NEW, IR_STORE, IR_LOAD, IR_ADD, IR_SUB,
-	IR_MUL, IR_DIV, IR_MODULUS, IR_CONST, IR_NEG,
+	IR_ADD, IR_SUB, IR_MUL, IR_DIV, 
+	IR_MODULUS, IR_CONST, IR_NEG, IR_CAST,
 	IR_MAX
 };
 
@@ -38,17 +38,6 @@ typedef struct IRBinaryOp {
 	uint32_t ID;
 } IRBinaryOp; 
 
-// t%ID = copy <target>
-typedef struct IRCopyValue {
-	uint32_t ID;
-	uint32_t target;
-} IRCopyValue;
-
-// tID = alloc [type]
-typedef struct IRAllocate {
-	IRType* type;
-} IRAllocate;
-
 // tID = const [type] <target>
 typedef struct IRConstant {
 	int64_t  target;
@@ -61,18 +50,12 @@ typedef struct IRNegate {
 	uint32_t ID;
 } IRNegate;
 
-// store <dest>, <source>
-typedef struct IRStoreMemory {
-	uint32_t dest;
-	uint32_t source;
-} IRStoreMemory;
-
-// tID = load <dest>, <source>
-typedef struct IRLoad {
-	uint32_t dest;
-	uint32_t source;
+// tID = cast [type] <target>
+typedef struct IRCastType {
+	IRInst* target;
+	Type* type;
 	uint32_t ID;
-} IRLoadMemory;
+} IRCastType;
 
 Vector* GenIR(Vector* stats, Vector* symtab);
 void PrintIR(Vector* IR);

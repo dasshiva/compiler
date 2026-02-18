@@ -69,6 +69,17 @@ IRInst* IRNeg(Vector* IR, IRInst* operand, IRType* type) {
 	return inst;
 }
 
+IRInst* IRCast(Vector* IR, IRInst* operand, IRType* type) {
+	IRInst* inst = MakeIRInst(IR_CAST);
+	IRCastType* op = malloc(sizeof(IRCastType));
+	inst->type = type;
+	op->target = operand;
+
+	inst->operands = op;
+	Append(IR, inst);
+	return inst;
+}
+
 uint32_t* GetIDField(IRInst* inst) {
 	switch (inst->code) {
 		case IR_ADD: case IR_SUB: case IR_MUL: case IR_DIV:
@@ -87,6 +98,10 @@ uint32_t* GetIDField(IRInst* inst) {
 			return &op->ID;
 		}
 
+		case IR_CAST: {
+			IRCastType* cast = inst->operands;
+			return &cast->ID;
+		}
 		default: return NULL;
 	}
 }

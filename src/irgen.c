@@ -97,6 +97,20 @@ static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr,
 			return rmd->id;
 		}
 
+		case ET_CAST: {
+			IRInst* target = GenIRExprRecurse(IR, expr->cast->expr, 
+					symtab, level + 1);
+			if (!target)
+				return NULL;
+
+			IRInst* ret = IRCast(IR, target, expr->cast->target);
+
+			if (!level)
+				goto clean_exit;
+
+			return ret;
+		}
+
 		default: {
 			printf("IRGenExprRecurse(): expr->type %d does not "
 				"have IRGen implemented for it\n", expr->type);
@@ -164,8 +178,8 @@ Vector* GenIR(Vector* stats, Vector* symtab) {
 }
 
 const char* IR2S[] = {
-	"new", "store", "load", "add",
-	"sub", "mul", "div", "mod", "constant", "neg"
+	"add", "sub", "mul", "div", "mod", 
+	"constant", "neg", "cast"
 };
 
 void PrintIR(Vector* IR) {
@@ -216,7 +230,17 @@ void PrintIR(Vector* IR) {
 				if (inst->type)
 					printf("%s ", inst->type->name);
 
-				printf("t%u\n", GetIDField(neg->target));
+				printf("t%u\n", *GetIDField(neg->target));
+				break;
+			}
+
+			case IR_CAST: {
+				IRCastType* cast = inst->operands;
+				printf("t%u = ", cast->ID);
+				printf("%s ", IR2S[inst->code]);
+				printf("%s ", inst->type->name);
+
+				printf("t%u\n", *GetIDField(cast->target));
 				break;
 			}
 

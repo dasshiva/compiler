@@ -1,0 +1,4 @@
+// let a:i32 = i32(9, 2); -> Only 1 argument is needed
+// let a:i32 = i33(9); -> Unknown type name in cast expression
+// let a:i32 = 9(i32); -> Expected identifier before '('
+let b:i16 = 9i16 + i16(9);

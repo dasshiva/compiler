@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "parser-utils.h"
 #include "parse-expr.h"
 #include <stdio.h>
@@ -37,7 +38,7 @@ static int OpToInfixIndex(TokenType type) {
 	}
 }
 
-static Expr* ParseFunCall(Lexer* lexer) {
+static Vector* ParseFunCall(Lexer* lexer, Token* callop) {
 	Vector* args = NewVector();
 
 	while (1) {
@@ -75,10 +76,37 @@ static Expr* ParseFunCall(Lexer* lexer) {
 		}
 	}
 
-	Expr* expr = makeExpr(ET_TUPLE);
-	expr->tuple = args;
+	// For the moment, function calls are only the built-in type casts, 
+	// so there should only be 1 argument
+	if (VectorLength(args) != 1) {
+		ParserError(lexer, callop, "Only 1 argument is needed");
+		return NULL;
+	}
 
-	return expr;
+	return args;
+}
+
+Type* ValidateFunCall(Lexer* lexer, Expr* name, Token* tname) {
+	if (name->type != ET_IDENT) {
+		ParserError(lexer, tname, "Expected identifier before '('");
+		return NULL;
+	}
+
+	Type* totype = NULL;
+
+	for (int i = 0; i < len_builtins; i++) {
+		if (strcmp(BUILTIN_TYPES[i]->name, name->ident) == 0) {
+			totype = BUILTIN_TYPES[i];
+			break;
+		}
+	}
+
+	if (!totype) {
+		ParserError(lexer, tname, "Unknown type name in cast expression");
+		return NULL;
+	}
+
+	return totype;
 }
 
 static Expr* ParsePredicate(Lexer* lexer) { 
@@ -176,12 +204,22 @@ Expr* PrattParseExpr(Lexer* lexer, Expr* expr, int minbp) {
 		Expr* rhs = NULL;
 
 		if (op->type == TT_LPAREN) {
-			printf("Function calls are disabled at the moment\n");
-			exit(1);
-
-			rhs = ParseFunCall(lexer);
-			if (!rhs)
+			Type* type = ValidateFunCall(lexer, lhs, op);
+			if (!type)
 				return NULL;
+
+			Vector* args = ParseFunCall(lexer, op);
+			if (!args)
+				return NULL;
+
+			rhs = makeExpr(ET_CAST);
+			rhs->cast = malloc(sizeof(Cast));
+			rhs->cast->target = type;
+			rhs->cast->expr = Get(args, 0);
+			lhs = rhs;
+			lhs->loc.line = op->line;
+			lhs->loc.pos = op->pos;
+			continue;
 		}
 		else {
 			rhs = PrattParseExpr(lexer, NULL, r_bp);

@@ -3,19 +3,19 @@
 Type TYPE_I8 = {
 	.name = "i8",
 	.size = 1,
-	.align = 1
+	.align = 1,
 };
 
 Type TYPE_I16 = {
 	.name = "i16",
 	.size = 2,
-	.align = 2
+	.align = 2,
 };
 
 Type TYPE_I32 = {
 	.name = "i32",
 	.size = 4,
-	.align = 4
+	.align = 4,
 };
 
 Type TYPE_I64 = {

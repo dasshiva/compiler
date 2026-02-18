@@ -33,7 +33,6 @@ enum BinaryOpType OpToBinop(TokenType type) {
 		case TT_SLASH: return BOT_DIV;
 		case TT_PERCENT: return BOT_MOD;
 		case TT_EQUALS: return BOT_EQUALS;
-		case TT_LPAREN: return BOT_FNCALL;
 	}
 
 	return BOT_MAX; // unreachable
@@ -84,12 +83,9 @@ void DumpExpr(Expr* expr) {
 		DumpExpr(expr->binop->right);
 		printf("%s ", BOT_TO_STRING[expr->binop->type]); 
 	}
-	else if (expr->type == ET_TUPLE) {
-		for (uint32_t idx = 0; idx < VectorLength(expr->tuple); idx++) {
-			DumpExpr(Get(expr->tuple, idx));
-			if (idx + 1 != VectorLength(expr->tuple))
-				printf(", ");
-		}
+	else if (expr->type == ET_CAST) {
+		DumpExpr(expr->cast->expr);
+		printf("(%s)", expr->cast->target->name);
 	}
 }
 
