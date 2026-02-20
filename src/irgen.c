@@ -29,13 +29,13 @@ static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr,
 			UnaryOp* unop = expr->unop;
 			IRInst* operand = GenIRExprRecurse(IR, unop->operand,
 					symtab, level + 1);
-
+			
 			IRInst* ret = operand;
-
+			IRType* type = (operand) ? operand->type : NULL;
 			switch (unop->type) {
 				case OP_UNARY_ADD: break; // A unary add is effectively a nop
 				case OP_UNARY_SUB: {
-					ret = IRNeg(IR, operand, NULL); break;
+					ret = IRNeg(IR, operand, type); break;
 				}
 			}
 
@@ -53,12 +53,14 @@ static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr,
 					symtab, level + 1);
 
 			IRInst* ret = NULL;
+			IRType* type = (left) ? left->type : NULL;
+
 			switch (binop->type) {
-				case OP_BINARY_ADD: ret = IRAdd(IR, left, right, NULL); break;
-				case OP_BINARY_SUB: ret = IRSub(IR, left, right, NULL); break;
-				case OP_BINARY_MUL: ret = IRMul(IR, left, right, NULL); break;
-				case OP_BINARY_DIV: ret = IRDiv(IR, left, right, NULL); break;
-				case OP_BINARY_MOD: ret = IRMod(IR, left, right, NULL); break;
+				case OP_BINARY_ADD: ret = IRAdd(IR, left, right, type); break;
+				case OP_BINARY_SUB: ret = IRSub(IR, left, right, type); break;
+				case OP_BINARY_MUL: ret = IRMul(IR, left, right, type); break;
+				case OP_BINARY_DIV: ret = IRDiv(IR, left, right, type); break;
+				case OP_BINARY_MOD: ret = IRMod(IR, left, right, type); break;
 				case OP_BINARY_EQUALS: {
 					RMD* saved = NULL;
 					for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
