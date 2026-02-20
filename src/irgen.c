@@ -31,11 +31,10 @@ static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr,
 					symtab, level + 1);
 			
 			IRInst* ret = operand;
-			IRType* type = (operand) ? operand->type : NULL;
 			switch (unop->type) {
 				case OP_UNARY_ADD: break; // A unary add is effectively a nop
 				case OP_UNARY_SUB: {
-					ret = IRNeg(IR, operand, type); break;
+					ret = IRNeg(IR, operand, operand->type); break;
 				}
 			}
 
@@ -53,7 +52,7 @@ static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr,
 					symtab, level + 1);
 
 			IRInst* ret = NULL;
-			IRType* type = (left) ? left->type : NULL;
+			IRType* type = left->type;
 
 			switch (binop->type) {
 				case OP_BINARY_ADD: ret = IRAdd(IR, left, right, type); break;
@@ -135,7 +134,8 @@ static int GenIRVarDecl(Vector* IR, VarDecl* vardecl,
 
 	RMD* rmd = malloc(sizeof(RMD));
 	rmd->type = GetType(symtab, vardecl->type);
-	rmd->id = NULL;
+	rmd->id = malloc(sizeof(IRInst));
+	rmd->id->type = rmd->type;
 
 	Symbol* var = GetVariable(symtab, vardecl->ident);
 	var->data = rmd;
