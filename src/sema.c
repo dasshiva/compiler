@@ -165,6 +165,13 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 				return 0;
 			}
 
+			Type* tlhs = ConvertTagToType(lhs, symtab);
+			Type* trhs = ConvertTagToType(rhs, symtab);
+			if (!TypeSupportsOp(tlhs, expr->binop->type, trhs)) {
+				MakeError(err, &expr->loc, "Mismatching types for operator");
+				return 0;
+			}
+
 			if (lhs != rhs) {
 				MakeError(err, &expr->loc, "Mismatching types for operator");
 				return 0;
