@@ -17,25 +17,25 @@ int IsOperator(TokenType type) {
 	}
 }
 
-enum UnaryOpType OpToUnop(TokenType type) {
+OperatorCode OpToUnop(TokenType type) {
 	switch (type) {
-		case TT_PLUS: return UOT_ADD;
-		case TT_MINUS: return UOT_MINUS;
-		default: return UOT_MAX; // unreachable
+		case TT_PLUS: return OP_UNARY_ADD;
+		case TT_MINUS: return OP_UNARY_SUB;
+		default: return OP_UNARY_MAX; // unreachable
 	}
 }
 
-enum BinaryOpType OpToBinop(TokenType type) {
+OperatorCode OpToBinop(TokenType type) {
 	switch (type) {
-		case TT_PLUS: return BOT_ADD;
-		case TT_MINUS: return BOT_SUB;
-		case TT_ASTERISK: return BOT_MUL;
-		case TT_SLASH: return BOT_DIV;
-		case TT_PERCENT: return BOT_MOD;
-		case TT_EQUALS: return BOT_EQUALS;
+		case TT_PLUS: return OP_BINARY_ADD;
+		case TT_MINUS: return OP_BINARY_SUB;
+		case TT_ASTERISK: return OP_BINARY_MUL;
+		case TT_SLASH: return OP_BINARY_DIV;
+		case TT_PERCENT: return OP_BINARY_MOD;
+		case TT_EQUALS: return OP_BINARY_EQUALS;
 	}
 
-	return BOT_MAX; // unreachable
+	return OP_BINARY_MAX; // unreachable
 }
 
 Expr* makeExpr(enum ExprType type) {
@@ -64,11 +64,6 @@ void DumpStatement(Statement* stat) {
 	}
 }
 
-static const char* UOT_TO_STRING[] = { "u+", "u-" };
-static const char* BOT_TO_STRING[] = {
-	"+", "-", "*", "/", "=", "%", "()"
-};
-
 void DumpExpr(Expr* expr) {
 	if (expr->type == ET_INT_LITERAL)
 		printf("%d ", expr->literal->number);
@@ -76,12 +71,12 @@ void DumpExpr(Expr* expr) {
 		printf("%s ", expr->ident);
 	else if (expr->type == ET_UNARY_OP) {
 		DumpExpr(expr->unop->operand);
-		printf("%s ", UOT_TO_STRING[expr->unop->type]);
+		printf("%s ", Operator2String(expr->unop->type));
 	}
 	else if (expr->type == ET_BINARY_OP) {
 		DumpExpr(expr->binop->left);
 		DumpExpr(expr->binop->right);
-		printf("%s ", BOT_TO_STRING[expr->binop->type]); 
+		printf("%s ", Operator2String(expr->binop->type)); 
 	}
 	else if (expr->type == ET_CAST) {
 		DumpExpr(expr->cast->expr);

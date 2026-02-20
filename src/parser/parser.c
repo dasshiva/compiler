@@ -24,7 +24,7 @@ int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr) {
 	
 	if (*source == '0') { 
 		if (token->length == 1) {
-			expr->literal->type = &TYPE_I32;
+			expr->literal->type = I32();
 			expr->literal->number = 0;
 			return 1;
 		}
@@ -72,7 +72,7 @@ int ParseIntLiteral(Lexer* lexer, Token* token, Expr* expr) {
 		source++;
 	}
 
-	expr->literal->type = (type) ? type : &TYPE_I32;
+	expr->literal->type = (type) ? type : I32();
 	expr->literal->number = literal;
 	return 1;
 }

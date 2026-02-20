@@ -47,7 +47,7 @@ Symbol* MakeSymbol(const char* name, enum SymbolType type, uint32_t flags) {
 	return ret;
 }
 
-const Type* GetType(Vector* symtab, const char* name) {
+Type* GetType(Vector* symtab, const char* name) {
 	for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
 		Symbol* sym = Get(symtab, idx);
 		if (sym->type != TYPE_TYPEDEF)
@@ -60,7 +60,7 @@ const Type* GetType(Vector* symtab, const char* name) {
 	return NULL;
 }
 
-const Symbol* GetVariable(Vector* symtab, const char* name) {
+Symbol* GetVariable(Vector* symtab, const char* name) {
 	for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
 		Symbol* sym = Get(symtab, idx);
 		if (sym->type != TYPE_VARIABLE)
@@ -73,72 +73,26 @@ const Symbol* GetVariable(Vector* symtab, const char* name) {
 	return NULL;
 }
 
-const int TAG_I8 = 0;
-const int TAG_I16 = 1;
-const int TAG_I32 = 2;
-const int TAG_I64 = 3;
-const int TAG_U8 = 4;
-const int TAG_U16 = 5;
-const int TAG_U32 = 6;
-const int TAG_U64 = 7;
+static Type* ConvertTagToType(const int* tag, Vector* symtab) {
+	Type* ret = NULL;
 
-static const Type* ConvertTagToType(const int* tag) {
-	// Please find a better way of doing this
-	if (tag == &TAG_I8)
-		return &TYPE_I8;
+	for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
+		Symbol* sym = Get(symtab, idx);
+		if (sym->type == TYPE_TYPEDEF) {
+			if (sym->utype->tag == *tag) {
+				ret = sym->utype;
+				break;
+			}
+		}
+	}
 
-	else if (tag == &TAG_I16)
-		return &TYPE_I16;
-
-	else if (tag == &TAG_I32)
-		return &TYPE_I32;
-
-	else if (tag == &TAG_I64)
-		return &TYPE_I64;
-
-	else if (tag == &TAG_U8)
-		return &TYPE_U8;
-
-	else if (tag == &TAG_U16)
-		return &TYPE_U16;
-
-	else if (tag == &TAG_U32)
-		return &TYPE_U32;
-
-	else if (tag == &TAG_U64)
-		return &TYPE_U64;
-
-	return NULL;
+	return ret;
 }
 
 static const int* ConvertTypeToTag(const Type* type) {
-	// FIXME: This is bad, please find a better way to do this
-	if (type == &TYPE_I8)
-		return &TAG_I8;
-
-	else if (type == &TYPE_I16)
-		return &TAG_I16;
-
-	else if (type == &TYPE_I32)
-		return &TAG_I32;
-
-	else if (type == &TYPE_I64)
-		return &TAG_I64;
-
-	else if (type == &TYPE_U8)
-		return &TAG_U8;
-
-	else if (type == &TYPE_U16)
-		return &TAG_U16;
-
-	else if (type == &TYPE_U32)
-		return &TAG_U32;
-
-	else if (type == &TYPE_U64)
-		return &TAG_U64;
-
-	return NULL;
+	return &type->tag;
 }
+
 static int SemaExprEvaluate(Vector* opstack, Expr* expr, 
 		Vector* symtab, Error* err) {
 	switch (expr->type) {
@@ -228,7 +182,7 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 	}
 }
 
-static const Type* SemaExpression(Expr* expr, Vector* symtab, Error* err) {
+static Type* SemaExpression(Expr* expr, Vector* symtab, Error* err) {
 	Vector* opstack = NewVector();
 	if (!SemaExprEvaluate(opstack, expr, symtab, err))
 		return NULL;
@@ -238,7 +192,7 @@ static const Type* SemaExpression(Expr* expr, Vector* symtab, Error* err) {
 		return NULL;
 	}
 
-	return ConvertTagToType(Pop(opstack));
+	return ConvertTagToType(Pop(opstack), symtab);
 }
 
 
@@ -259,7 +213,7 @@ static int SemaVarDecl(Statement* stat, Vector* symtab, Error* err) {
 	sym->utype = (ty) ? ty : NULL;
 
 	if (vardecl->init) {
-		const Type* type = SemaExpression(vardecl->init, symtab, err);
+		Type* type = SemaExpression(vardecl->init, symtab, err);
 		if (!type)
 			return 0;
 

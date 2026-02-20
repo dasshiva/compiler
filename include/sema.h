@@ -13,12 +13,12 @@ typedef struct Symbol {
 	const char* name;
 	enum SymbolType type;
 	uint32_t flags;
-	const Type* utype;
+	Type* utype;
 	void* data;
 } Symbol;
 
 Vector* SemanticAnalyse(Lexer* lexer, Vector* statements);
-const Type* GetType(Vector* symtab, const char* name);
-const Symbol* GetVariable(Vector* symtab, const char* name);
+Type* GetType(Vector* symtab, const char* name);
+Symbol* GetVariable(Vector* symtab, const char* name);
 
 #endif

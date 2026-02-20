@@ -2,25 +2,30 @@
 #define __TYPES_H__
 
 #include <stdint.h>
+#include "operators.h"
 
 typedef struct Type {
 	const char* name;
-	const uint8_t size;
-	const uint8_t align;
+	int 		tag;
+	int 		size;
+	int 		align;
+	int 		flags;
 } Type;
 
-extern Type TYPE_I8;
-extern Type TYPE_I16;
-extern Type TYPE_I32;
-extern Type TYPE_I64;
+extern const int BUILTIN_TAGS_MAX;
 
-extern Type TYPE_U8;
-extern Type TYPE_U16;
-extern Type TYPE_U32;
-extern Type TYPE_U64;
+Type* I8();
+Type* I16();
+Type* I32();
+Type* I64();
 
-// Array of all known built-in types
+Type* U8();
+Type* U16();
+Type* U32();
+Type* U64();
+
 extern Type* BUILTIN_TYPES[];
 extern const int len_builtins;
+int TypeSupportsOp(Type* type, OperatorCode code, Type* stype);
 
 #endif

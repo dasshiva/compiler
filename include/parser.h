@@ -2,6 +2,7 @@
 #define __PARSER_H__
 
 #include "lexer.h"
+#include "operators.h"
 #include "types.h"
 
 typedef struct Location {
@@ -9,26 +10,16 @@ typedef struct Location {
 	uint32_t pos;
 } Location;
 
-enum BinaryOpType {
-	BOT_ADD, BOT_SUB,
-	BOT_MUL, BOT_DIV, BOT_EQUALS, BOT_MOD,
-	BOT_FNCALL, BOT_MAX
-};
-
-enum UnaryOpType {
-	UOT_ADD, UOT_MINUS, UOT_MAX
-};
-
 struct Expr;
 typedef struct BinaryOp {
-	enum BinaryOpType type;
+	OperatorCode type;
 	struct Expr* left;
 	struct Expr* right;
 	Location loc; 
 } BinaryOp;
 
 typedef struct UnaryOp {
-	enum UnaryOpType type;
+	OperatorCode type;
 	struct Expr* operand;
 	Location loc;
 } UnaryOp;

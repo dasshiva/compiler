@@ -1,3 +1,4 @@
+#include "operators.h"
 #include "irgenhelpers.h"
 
 #include <stdlib.h>
@@ -32,8 +33,8 @@ static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr,
 			IRInst* ret = operand;
 
 			switch (unop->type) {
-				case UOT_ADD: break; // A unary add is effectively a nop
-				case UOT_MINUS: {
+				case OP_UNARY_ADD: break; // A unary add is effectively a nop
+				case OP_UNARY_SUB: {
 					ret = IRNeg(IR, operand, NULL); break;
 				}
 			}
@@ -53,12 +54,12 @@ static IRInst* GenIRExprRecurse(Vector* IR, Expr* expr,
 
 			IRInst* ret = NULL;
 			switch (binop->type) {
-				case BOT_ADD: ret = IRAdd(IR, left, right, NULL); break;
-				case BOT_SUB: ret = IRSub(IR, left, right, NULL); break;
-				case BOT_MUL: ret = IRMul(IR, left, right, NULL); break;
-				case BOT_DIV: ret = IRDiv(IR, left, right, NULL); break;
-				case BOT_MOD: ret = IRMod(IR, left, right, NULL); break;
-				case BOT_EQUALS: {
+				case OP_BINARY_ADD: ret = IRAdd(IR, left, right, NULL); break;
+				case OP_BINARY_SUB: ret = IRSub(IR, left, right, NULL); break;
+				case OP_BINARY_MUL: ret = IRMul(IR, left, right, NULL); break;
+				case OP_BINARY_DIV: ret = IRDiv(IR, left, right, NULL); break;
+				case OP_BINARY_MOD: ret = IRMod(IR, left, right, NULL); break;
+				case OP_BINARY_EQUALS: {
 					RMD* saved = NULL;
 					for (uint32_t idx = 0; idx < VectorLength(symtab); idx++) {
 						Symbol* var = Get(symtab, idx);
