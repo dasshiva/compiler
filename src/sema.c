@@ -201,7 +201,7 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 					target->cast->expr = saved;
 					target->loc = saved->loc;
 					expr->binop->left = target;
-					*lhs = *rhs;
+					lhs = rhs;
 				}
 
 				else if (r2l) {
