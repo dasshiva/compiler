@@ -128,6 +128,13 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 				return 0;
 
 			int* lhs = Pop(opstack);
+			if (!TypeSupportsOp(ConvertTagToType(lhs, symtab), 
+						expr->unop->type, NULL)) {
+				MakeError(err, &expr->loc, "Invalid type for unary operator");
+				return 0;
+
+			}
+
 			if (lhs == INVALID_INDEX) {
 				printf("SemaExprEvaluate(): lhs == NULL\n");
 				return 0;

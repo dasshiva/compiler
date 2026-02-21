@@ -89,9 +89,12 @@ Type* U64() { return &TYPE_U64; }
 int TypeSupportsOp(Type* type, OperatorCode code, Type* stype) {
 	int arity = OperatorArity(code);
 	
-	// All currently defined types support all unary operators
-	if (arity == 1)
+	if (arity == 1) {
+		// unsigned types cannot use the unary minus
+		if (type->flags & INT_UNSIGNED && code == OP_UNARY_SUB)
+			return 0;
 		return 1;
+	}
 
 	// If both types are equal, no need to check thoroughly
 	if (type == stype)
