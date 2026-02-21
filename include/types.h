@@ -27,5 +27,6 @@ Type* U64();
 extern Type* BUILTIN_TYPES[];
 extern const int len_builtins;
 int TypeSupportsOp(Type* type, OperatorCode code);
+int TypesCompatible(Type* t1, Type* t2);
 
 #endif

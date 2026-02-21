@@ -228,3 +228,14 @@ int PrimitiveSupportsOp(Type* type, OperatorCode code, int arity) {
 
 	return 0;
 }
+
+int PrimitiveTypesCompatible(Type* t1, Type* t2) {
+	BTD* b1 = t1->data;
+	for (int i = 0; i < b1->len_compat_type_tags; i++) {
+		if (b1->compat_type_tags[i] == t2->tag)
+			return 1;
+	}
+
+	return 0;
+}
+

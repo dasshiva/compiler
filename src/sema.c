@@ -1,4 +1,5 @@
 #include "sema.h"
+#include "parser-utils.h"
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -165,8 +166,8 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 			if (!l || !r)
 				return 0;
 
-			int* lhs = Pop(opstack);
 			int* rhs = Pop(opstack);
+			int* lhs = Pop(opstack);
 			if (lhs == INVALID_INDEX || rhs == INVALID_INDEX) {
 				printf("SemaExprEvaluate(): lhs == NULL || rhs == NULL\n");
 				return 0;
@@ -186,9 +187,37 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 
 			}
 
-			if (lhs != rhs) {
-				MakeError(err, &expr->loc, "Mismatching types for operator");
-				return 0;
+			if (*lhs != *rhs) {
+				int l2r = (expr->binop->type == OP_BINARY_EQUALS) 
+					? 0 : TypesCompatible(tlhs, trhs);
+				int r2l = TypesCompatible(trhs, tlhs);
+				Expr* target = NULL;
+
+				if (l2r) {
+					Expr* saved = expr->binop->left;
+					target = makeExpr(ET_CAST);
+					target->cast = malloc(sizeof(Cast));
+					target->cast->target = trhs;
+					target->cast->expr = saved;
+					target->loc = saved->loc;
+					expr->binop->left = target;
+					*lhs = *rhs;
+				}
+
+				else if (r2l) {
+					Expr* saved = expr->binop->right;
+					target = makeExpr(ET_CAST);
+					target->cast = malloc(sizeof(Cast));
+					target->cast->target = tlhs;
+					target->cast->expr = saved;
+					target->loc = saved->loc;
+					expr->binop->right = target;
+				}
+
+				else {
+					MakeError(err, &expr->loc, "Mismatching types for operator");
+					return 0;
+				}
 			}
 
 			Append(opstack, lhs);

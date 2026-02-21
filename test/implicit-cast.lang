@@ -1,0 +1,3 @@
+// Implicit type cast example
+// the 10 should be converted from i16 to i32
+let a: i32 = 9i32 + 10i16;
