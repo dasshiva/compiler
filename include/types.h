@@ -9,7 +9,7 @@ typedef struct Type {
 	int 		tag;
 	int 		size;
 	int 		align;
-	int 		flags;
+	void* 		data;
 } Type;
 
 extern const int BUILTIN_TAGS_MAX;
@@ -26,6 +26,6 @@ Type* U64();
 
 extern Type* BUILTIN_TYPES[];
 extern const int len_builtins;
-int TypeSupportsOp(Type* type, OperatorCode code, Type* stype);
+int TypeSupportsOp(Type* type, OperatorCode code);
 
 #endif

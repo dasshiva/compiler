@@ -129,7 +129,7 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 
 			int* lhs = Pop(opstack);
 			if (!TypeSupportsOp(ConvertTagToType(lhs, symtab), 
-						expr->unop->type, NULL)) {
+						expr->unop->type)) {
 				MakeError(err, &expr->loc, "Invalid type for unary operator");
 				return 0;
 
@@ -174,9 +174,16 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 
 			Type* tlhs = ConvertTagToType(lhs, symtab);
 			Type* trhs = ConvertTagToType(rhs, symtab);
-			if (!TypeSupportsOp(tlhs, expr->binop->type, trhs)) {
-				MakeError(err, &expr->loc, "Mismatching types for operator");
+
+			if (!TypeSupportsOp(tlhs, expr->binop->type)) {
+				MakeError(err, &expr->binop->left->loc, "Incompatible operand for operator");
 				return 0;
+			}
+
+			if (!TypeSupportsOp(trhs, expr->binop->type)) {
+				MakeError(err, &expr->binop->right->loc, "Incompatible operand for operator");
+				return 0;
+
 			}
 
 			if (lhs != rhs) {
