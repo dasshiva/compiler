@@ -1,3 +1,8 @@
 // Implicit type cast example
 // the 10 should be converted from i16 to i32
 let a: i32 = 9i32 + 10i16;
+// this will fail because the rhs of i32 can't be converted
+// into the i16 of the rhs
+// let b: i16 = 18i32 + 20i32;
+let b: i64 = 200i64;
+let c: i64 = 8i8 + 200i64;

@@ -146,6 +146,8 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 no_init:
 	stat->vardecl = malloc(sizeof(VarDecl));
 	stat->vardecl->init = expr;
+	stat->vardecl->loc.line = token->line;
+	stat->vardecl->loc.pos = token->pos;
 
 	// Trick ParseIdent into parsing these for us
 	Expr tmp;

@@ -177,12 +177,12 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 			Type* trhs = ConvertTagToType(rhs, symtab);
 
 			if (!TypeSupportsOp(tlhs, expr->binop->type)) {
-				MakeError(err, &expr->binop->left->loc, "Incompatible operand for operator");
+				MakeError(err, &expr->binop->left->loc, "Incompatible operand for operator of type %s", tlhs->name);
 				return 0;
 			}
 
 			if (!TypeSupportsOp(trhs, expr->binop->type)) {
-				MakeError(err, &expr->binop->right->loc, "Incompatible operand for operator");
+				MakeError(err, &expr->binop->right->loc, "Incompatible operand for operator of type %s", trhs->name);
 				return 0;
 
 			}
@@ -215,7 +215,7 @@ static int SemaExprEvaluate(Vector* opstack, Expr* expr,
 				}
 
 				else {
-					MakeError(err, &expr->loc, "Mismatching types for operator");
+					MakeError(err, &expr->loc, "Mismatching types for operator (%s and %s)", tlhs->name, trhs->name);
 					return 0;
 				}
 			}
