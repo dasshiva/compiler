@@ -1,0 +1,15 @@
+// Test out all the cases where functions error out
+// 1. Expected parameter name after comma
+// function x(a: i32,) -> i32 {}
+// 2. No type after '->'
+// function y(a: i32) -> {}
+// 3. No colon between type and name
+// function z(a i32) -> i32 {}
+// No parameter name
+// function d(: i32) {}
+// No parameter type
+// function f(a:) {}
+// No '{' after declaration
+// function g() }
+// No '}' after body
+function cf() {

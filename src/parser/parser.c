@@ -98,7 +98,7 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 	Token* token = Peek(lexer);
 	if (token->type != TT_IDENT) {
 		ParserError(lexer, token, "Expected an identifier");
-		return 1;
+		return 0;
 	}
 
 	stat->loc.line = token->line;
@@ -114,7 +114,7 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 		ty = Next(lexer);
 		if (ty->type != TT_IDENT) {
 			ParserError(lexer, ty, "Expected a type name here");
-			return 1;
+			return 0;
 		}
 
 		op = Peek(lexer); // move to the next token
@@ -122,7 +122,7 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 	
 	if (op->type != TT_EQUALS && op->type != TT_SEMICOLON) {
 		ParserError(lexer, op, "Expected '=' or ';' here");
-		return 1;
+		return 0;
 	}
 
 	Expr* expr = (op->type == TT_SEMICOLON) ? NULL : makeExpr(ET_IDENT);
@@ -130,18 +130,18 @@ int ParseVarDecl(Lexer* lexer, Statement* stat) {
 		if (!ty) {
 			ParserError(lexer, token, "Variables without an initializer "
 				"must have a type provided to them");
-			return 1;
+			return 0;
 		}
 
 		goto no_init;
 	}
 
 	if (!ParseIdent(lexer, token, expr))
-		return 1;
+		return 0;
 
 	expr = ParseExpression(lexer, expr);
 	if (!expr)
-		return 1;
+		return 0;
 
 no_init:
 	stat->vardecl = malloc(sizeof(VarDecl));
@@ -161,11 +161,153 @@ no_init:
 	} else
 		stat->vardecl->type = NULL;
 
-	return 0;
+	return 1;
+}
+
+/*
+ * function ::= "function" name '(' args (',' args) ')' 
+ 	("->" type) '{' (statement) '}'
+ * args ::= name ':' type
+ *
+ */
+int ParseFunction(Lexer* lexer, Statement* stat) {
+	Token* fname = Next(lexer);
+	if (fname->type != TT_IDENT) {
+		ParserError(lexer, fname, "Expected function name here");
+		return 0;
+	}
+
+	stat->type = ST_FUNCTION;
+	stat->func = malloc(sizeof(Function));
+	if (!stat->func)
+		return 0;
+
+	Expr tmp;
+	ParseIdent(lexer, fname, &tmp);
+	stat->func->name = tmp.ident;
+
+	if (!Expect(lexer, TT_LPAREN, "Expected '(' here"))
+		return 0;
+
+	stat->func->args = NewVector();
+	
+	int more_params = 0;
+	while (1) {
+		Token* token = Peek(lexer);
+		if (token->type == TT_RPAREN) {
+			if (more_params) 
+				goto parse_next_param;
+
+			Next(lexer);
+			break;
+		}
+
+parse_next_param:
+
+		if (token->type != TT_IDENT) {
+			ParserError(lexer, token, "Expected name of parameter");
+			return 0;
+		}
+
+		FuncArgs* fnargs = malloc(sizeof(FuncArgs));
+		if (!fnargs)
+			return 0;
+
+		ParseIdent(lexer, token, &tmp);
+		fnargs->name = tmp.ident;
+		Next(lexer);
+
+		if (!Expect(lexer, TT_COLON, "Expected ':' between name "
+					"of parameter and type "))
+			return 0;
+
+		token = Next(lexer);
+		if (token->type != TT_IDENT) {
+			ParserError(lexer, token, "Expected parameter type");
+			return 0;
+		}
+
+		ParseIdent(lexer, token, &tmp);
+		fnargs->type = tmp.ident;
+		Append(stat->func->args, fnargs);
+
+		more_params = 0;
+
+		token = Peek(lexer);
+		if (token->type == TT_RPAREN) {
+			Next(lexer);
+			break;
+		}
+
+		if (token->type == TT_COMMA) {
+			Next(lexer);
+			more_params = 1;
+			continue;
+		} 
+		else {
+			ParserError(lexer, token, "Expected ',' between parameters");
+			return 0;
+		}
+	}
+
+parse_return_type:
+
+	Token* ret = Peek(lexer);
+	if (ret->type == TT_RETURNS) {
+		Next(lexer);
+		ret = Next(lexer);
+		if (ret->type != TT_IDENT) {
+			ParserError(lexer, ret, "Expected return type after '->'");
+			return 0;
+		}
+
+		ParseIdent(lexer, ret, &tmp);
+		stat->func->rtype = tmp.ident;
+	}
+
+	else if (ret->type == TT_LCURLY) {
+		stat->func->rtype = NULL;
+		Next(lexer);
+		goto parse_statements;
+	}
+
+	else {
+		ParserError(lexer, ret, "Expected '->' or '{' here");
+		return 0;
+	}
+
+	if (stat->func->rtype) {
+		if (!Expect(lexer, TT_LCURLY, "Expected '{' here"))
+			return 0;
+	}
+
+parse_statements:
+
+	stat->func->statements = NewVector();
+	while (1) {
+		Token* next = Peek(lexer);
+		if (next->type == TT_RCURLY) {
+			Next(lexer);
+			break;
+		}
+
+		if (next->type == TT_EOF) {
+			ParserError(lexer, next, "Expected '}' to terminate function");
+			return 0;
+		}
+
+		Statement* funcstat = ParseStatement(lexer);
+		if (!funcstat)
+			return 0;
+
+		Append(stat->func->statements, funcstat);
+	}
+
+	return 1;
 }
 
 /* 
- * statement ::= expr ';' | 
+ * statement ::= expr  
  * "let" ident (':' type ) '=' expr ';'
  */
 
@@ -181,11 +323,22 @@ Statement* ParseStatement(Lexer* lexer) {
 	if (!stat)
 		return NULL;
 
+	int delim_handled = 0;
+
 	switch (token->type) {
 		case TT_LET: {
 			Next(lexer);
-			if (ParseVarDecl(lexer, stat))
+			if (!ParseVarDecl(lexer, stat))
 				return NULL;
+			break;
+		}
+
+		case TT_FUNCTION: {
+			Next(lexer);
+			if (!ParseFunction(lexer, stat))
+				return NULL;
+
+			delim_handled = 1;
 			break;
 		}
 
@@ -201,8 +354,10 @@ Statement* ParseStatement(Lexer* lexer) {
 		}
 	}
 
-	if (!Expect(lexer, TT_SEMICOLON, "Expected ';' here"))
-		return NULL;
+	if (!delim_handled) {
+		if (!Expect(lexer, TT_SEMICOLON, "Expected ';' here"))
+			return NULL;
+	}
 
 	return stat;
 }

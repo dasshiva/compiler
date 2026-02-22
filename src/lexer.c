@@ -157,7 +157,7 @@ static void SkipSpace(Lexer* lexer) {
 
 // List of all keywords
 static const char* keywords[] = {
-	"let", NULL
+	"let", "function", NULL
 };
 
 int lkeywords = ARRAY_SIZE(keywords);
@@ -165,13 +165,13 @@ int lkeywords = ARRAY_SIZE(keywords);
 /* Lengths of all keywords, indexed by their position
  * in keywords[] i.e klen[i] = strlen(keywords[i]) */
 static int klen[] = {
-	3, 0
+	3, 8, 0
 };
 
 /* What token type each keyword in keywords[] maps to
  * i.e kmap[i] = TokenType(keywords[i]) */
 static TokenType kmap[] = {
-	TT_LET, 0 
+	TT_LET, TT_FUNCTION, 0 
 };
 
 static Token* ReadIdentOrKeyword(Lexer* lexer) {
@@ -270,7 +270,13 @@ Token* Next(Lexer* lexer) {
 	char c = lexer->source[lexer->offset];
 	switch (c) {
 		case '+' : return makeToken(lexer, TT_PLUS, 1);
-		case '-' : return makeToken(lexer, TT_MINUS, 1);
+		case '-' : {
+			int next = LexerPeek(lexer);
+			switch (next) {
+				case '>': return makeToken(lexer, TT_RETURNS, 2);
+				default: return makeToken(lexer, TT_MINUS, 1);
+			}
+		}
 		case '*' : return makeToken(lexer, TT_ASTERISK, 1);
 		case '/' : {
 			int next = LexerPeek(lexer);
@@ -285,6 +291,8 @@ Token* Next(Lexer* lexer) {
 		case ':' : return makeToken(lexer, TT_COLON, 1);
 		case ',' : return makeToken(lexer, TT_COMMA, 1);
 		case '(' : return makeToken(lexer, TT_LPAREN, 1);
+		case '{' : return makeToken(lexer, TT_LCURLY, 1);
+		case '}' : return makeToken(lexer, TT_RCURLY, 1);
 		case ')' : return makeToken(lexer, TT_RPAREN, 1);
 		case '%' : return makeToken(lexer, TT_PERCENT, 1);
 		default: {
@@ -310,7 +318,8 @@ Token* Peek(Lexer* lexer) {
 
 static const char* T2S[] = {
 	"EOF", "Number", "+", "-", "*", "/", ";", 
-	"let", "Identifier", "=", ":", "%", "(", ")", ","
+	"let", "Identifier", "=", ":", "%", "(", ")", ",",
+	"function", "->", "{", "}", "token_max_invalid"
 };
 
 void DumpToken(Lexer* lexer, Token* token) {

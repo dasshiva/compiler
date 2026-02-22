@@ -56,7 +56,8 @@ typedef struct Expr {
 
 enum StatementType {
 	ST_EXPR,
-	ST_VARDECL
+	ST_VARDECL,
+	ST_FUNCTION
 };
 
 typedef struct VarDecl {
@@ -67,11 +68,24 @@ typedef struct VarDecl {
 	Location loc_type;
 } VarDecl;
 
+typedef struct FuncArgs {
+	const char* type;
+	const char* name;
+} FuncArgs;
+
+typedef struct Function {
+	const char* name;
+	const char* rtype;
+	Vector* args;
+	Vector* statements;
+} Function;
+
 typedef struct Statement {
 	enum StatementType type;
 	union {
 		Expr* expr;
 		VarDecl* vardecl;
+		Function* func;
 	};
 
 	Location loc;

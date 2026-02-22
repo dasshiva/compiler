@@ -50,7 +50,7 @@ Expr* makeExpr(enum ExprType type) {
 void DumpStatement(Statement* stat) {
 	if (stat->type == ST_EXPR)
 		DumpExpr(stat->expr);
-	else {
+	else if (stat->type == ST_VARDECL) {
 		if (stat->vardecl->init)
 			DumpExpr(stat->vardecl->init);
 		else {
@@ -62,6 +62,25 @@ void DumpStatement(Statement* stat) {
 		if (stat->vardecl->type)
 			printf("%s ", stat->vardecl->type);
 	}
+
+	else if (stat->type == ST_FUNCTION) {
+		printf("function %s ", stat->func->name);
+		printf("(%d params) ", VectorLength(stat->func->args));
+		if (stat->func->rtype) 
+			printf("-> %s ", stat->func->rtype);
+
+		printf(" {\n");
+		for (uint32_t i = 0; i < VectorLength(stat->func->statements); i++) {
+			Statement* st = Get(stat->func->statements, i);
+			DumpStatement(st);
+			printf("\n");
+		}
+
+		printf("}");
+	}
+	else 
+		printf("DumpStatement(): Not Implemented for stat->type = %d", stat->type);
+	
 }
 
 void DumpExpr(Expr* expr) {
